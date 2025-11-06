@@ -7,7 +7,7 @@ import torch
 from pathlib import Path
 from typing import Optional, Union
 
-from .config import LOG_FILE, SEED
+from .config import LOG_DIR, SEED
 
 
 def setup_logging(log_file: Optional[Union[str, Path]] = None) -> logging.Logger:
@@ -20,7 +20,7 @@ def setup_logging(log_file: Optional[Union[str, Path]] = None) -> logging.Logger
         Configured logger instance.
     """
     if log_file is None:
-        log_file = LOG_FILE
+        log_file = LOG_DIR / "training.log"
     
     # Create logger
     logger = logging.getLogger('pregest')
@@ -86,16 +86,16 @@ def get_device() -> torch.device:
 
 
 def ensure_directory_exists(path: Union[str, Path]) -> Path:
-    """Ensure parent directory of a file path exists.
-
+    """Ensure directory path exists.
+    
     Args:
-        path: File path whose parent directory should exist.
-
+        path: Path to create.
+        
     Returns:
         Path object.
     """
     path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
+    path.mkdir(parents=True, exist_ok=True)
     return path
 
 

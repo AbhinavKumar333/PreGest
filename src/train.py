@@ -8,7 +8,10 @@ from pathlib import Path
 from typing import Dict, Tuple, Optional, Any
 import logging
 
-from .config import TRAIN_CONFIG, BEST_MODEL_PATH, FINAL_MODEL_PATH, DEVICE, NUM_CLASSES
+from .config import (
+    TRAIN_CONFIG, BEST_MODEL_PATH, FINAL_MODEL_PATH, DEVICE, NUM_CLASSES,
+    PRETRAINING_MODE, JESTER_CLASSES, QUEST3_TARGET_GESTURES, SELECTED_GESTURE_IDS
+)
 from .model import create_model
 from .utils import setup_logging, set_random_seeds, format_time, count_parameters
 from .dataset import preprocess_jester_dataset, load_preprocessed_data
@@ -116,7 +119,12 @@ def train_transformer(
     weight_decay: Optional[float] = None,
     device: Optional[torch.device] = None
 ) -> Dict[str, Any]:
-    """Complete training pipeline.
+    """Complete training pipeline with flexible pretraining options.
+    
+    Supports:
+    - Pretraining on 8 Quest3-mapped gestures
+    - Pretraining on all 27 Jester gestures
+    - Pretraining on custom gesture subset
     
     Args:
         train_loader: Training dataloader
@@ -148,6 +156,19 @@ def train_transformer(
     logger.info("="*70)
     logger.info("STARTING TRAINING PIPELINE")
     logger.info("="*70)
+    logger.info(f"\nPretraining Mode: {PRETRAINING_MODE}")
+    logger.info(f"Number of Classes: {NUM_CLASSES}")
+    
+    # Log pretraining configuration
+    if PRETRAINING_MODE == "quest3":
+        logger.info("Pretraining on 8 Quest3-mapped gestures:")
+        for gesture_id in SELECTED_GESTURE_IDS:
+            gesture_name = JESTER_CLASSES[gesture_id]
+            logger.info(f"  {gesture_id}: {gesture_name}")
+    elif PRETRAINING_MODE == "jester":
+        logger.info(f"Pretraining on all {NUM_CLASSES} Jester gestures")
+    else:
+        logger.info(f"Pretraining on custom {NUM_CLASSES} gestures: {SELECTED_GESTURE_IDS}")
     
     # Load or preprocess data if not provided
     if train_loader is None or val_loader is None:
@@ -247,6 +268,8 @@ def train_transformer(
     logger.info("="*70)
     logger.info(f"Best epoch: {best_epoch} (val_loss: {best_val_loss:.4f})")
     logger.info(f"Total training time: {format_time(total_time)}")
+    logger.info(f"Pretraining mode: {PRETRAINING_MODE}")
+    logger.info(f"Number of classes: {NUM_CLASSES}")
     
     # Load best model
     logger.info(f"\nLoading best model from epoch {best_epoch}...")
