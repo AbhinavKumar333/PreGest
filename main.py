@@ -25,7 +25,7 @@ import torch
 def setup_argparse() -> argparse.ArgumentParser:
     """Set up command line argument parser."""
     parser = argparse.ArgumentParser(
-        description="PreGest: EgoCentric & Quest 3 Gesture Recognition System",
+        description="PreGest: Quest 3 Gesture Recognition System",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -33,12 +33,6 @@ Examples:
   python main.py --dataset quest3 --preprocess --mode both
   python main.py --dataset quest3 --mode train
   python main.py --dataset quest3 --mode eval
-
-  # EgoCentric workflow
-  python main.py preprocess                    # Extract gesture windows
-  python main.py split                         # Create train/val/test splits
-  python main.py train                         # Train gesture spotting model
-  python main.py evaluate                      # Evaluate on test set
 
   # Custom training parameters
   python main.py train --epochs 50 --batch-size 8 --learning-rate 1e-5
@@ -51,7 +45,7 @@ Examples:
     # Global arguments
     parser.add_argument(
         '--dataset',
-        choices=['egocentric', 'quest3'],
+        choices=['quest3'],
         default=ACTIVE_DATASET,
         help='Dataset to use (default: quest3)'
     )
@@ -115,7 +109,7 @@ Examples:
     )
     train_parser.add_argument(
         '--dataset',
-        choices=['egocentric', 'quest3'],
+        choices=['quest3'],
         default=ACTIVE_DATASET,
         help='Dataset to use (default: quest3)'
     )
@@ -312,8 +306,7 @@ def execute_workflow(args: argparse.Namespace) -> None:
                 print(f"❌ Preprocessing failed: {e}")
                 sys.exit(1)
         else:
-            # EgoCentric preprocessing (not supported)
-            print("❌ EgoCentric preprocessing not supported in cleaned version")
+            print("Only Quest 3 datasets are supported!")
             sys.exit(1)
 
     # Training

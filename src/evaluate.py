@@ -1,4 +1,4 @@
-"""Evaluation and metrics for EgoCentricGesture spotting model."""
+"""Evaluation and metrics for Quest 3 gesture spotting model."""
 
 import numpy as np
 import torch
@@ -106,7 +106,7 @@ def evaluate_model(
         model: Trained gesture spotting model
         test_loader: Test dataloader
         device: Device to run evaluation on
-        dataset: Dataset type ("quest3", "egocentric", or "auto")
+        dataset: Dataset type ("quest3" or "auto")
 
     Returns:
         Dictionary with evaluation metrics
@@ -303,7 +303,7 @@ def run_complete_evaluation(model_path: Optional[Path] = None, dataset: str = "a
 
     Args:
         model_path: Path to model checkpoint. If None, uses BEST_MODEL_PATH.
-        dataset: Dataset type ("quest3", "egocentric", or "auto")
+        dataset: Dataset type ("quest3" or "auto")
 
     Returns:
         Evaluation results dictionary or None if failed.

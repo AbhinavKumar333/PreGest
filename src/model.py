@@ -156,7 +156,7 @@ class GestureSpottingTransformer(nn.Module):
 
     def __init__(
         self,
-        num_classes: int = 11,
+        num_classes: int = 8,
         backbone: str = 'resnet18',
         rgb_pretrained: bool = True,
         mask_pretrained: bool = False,
@@ -171,7 +171,7 @@ class GestureSpottingTransformer(nn.Module):
         """Initialize GestureSpottingTransformer.
 
         Args:
-            num_classes: Number of gesture classes (11 for EgoCentric)
+            num_classes: Number of gesture classes (8 for Quest 3)
             backbone: Backbone architecture ('resnet18', 'squeezenet')
             rgb_pretrained: Use ImageNet pretrained for RGB encoder
             mask_pretrained: Use ImageNet pretrained for mask encoder
@@ -332,7 +332,7 @@ class GestureSpottingTransformer(nn.Module):
 
 
 def create_model(
-    num_classes: int = 11,
+    num_classes: int = 8,
     backbone: str = 'resnet18',
     rgb_pretrained: bool = True,
     mask_pretrained: bool = False,
@@ -347,7 +347,7 @@ def create_model(
     """Create a gesture spotting model.
 
     Args:
-        num_classes: Number of gesture classes (11 for EgoCentric)
+        num_classes: Number of gesture classes (8 for Quest 3)
         backbone: Backbone architecture ('resnet18', 'squeezenet')
         rgb_pretrained: Use ImageNet pretrained for RGB encoder
         mask_pretrained: Use ImageNet pretrained for mask encoder
