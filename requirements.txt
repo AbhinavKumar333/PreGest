@@ -1,11 +1,25 @@
-torch
-torchvision
-numpy
-pandas
-scikit-learn
-opencv-python
-mediapipe
-matplotlib
-tqdm
-kaggle
-seaborn
+# Core Deep Learning
+torch==2.4.1
+torchvision==0.19.1
+
+# Scientific Computing (Python 3.12 compatible)
+numpy==1.26.4
+pandas==2.2.2
+
+# Computer Vision
+opencv-python==4.9.0.80
+Pillow==10.2.0
+
+# Hand detection: Using simplified skin color detection
+# (No additional dependencies needed - works with OpenCV)
+
+# Visualization
+matplotlib==3.8.3
+seaborn==0.13.2
+
+# Utilities
+tqdm==4.67.0
+python-dotenv==1.0.1
+
+# SKIP scikit-learn and scipy (not Python 3.12 compatible)
+# We'll install alternatives or refactor code

@@ -1,20 +1,73 @@
-"""Training pipeline for gesture recognition transformer."""
+"""
+Training pipeline for Quest 3 gesture recognition.
+Multi-modal gesture spotting with sequence-level classification.
+"""
 
+import json
 import time
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from pathlib import Path
 from typing import Dict, Tuple, Optional, Any
-import logging
+import math
 
 from .config import (
-    TRAIN_CONFIG, BEST_MODEL_PATH, FINAL_MODEL_PATH, DEVICE, NUM_CLASSES,
-    PRETRAINING_MODE, JESTER_CLASSES, QUEST3_TARGET_GESTURES, SELECTED_GESTURE_IDS
+    TRAIN_CONFIG, BEST_MODEL_PATH, FINAL_MODEL_PATH, DEVICE, MODEL_CONFIG,
+    QUEST3_GESTURES, NUM_QUEST3_CLASSES, RESULTS_DIR
 )
 from .model import create_model
-from .utils import setup_logging, set_random_seeds, format_time, count_parameters
-from .dataset import preprocess_jester_dataset, load_preprocessed_data
+from .quest3_dataset import get_quest3_dataloaders
+from .utils import setup_logging, format_time, count_parameters
+
+
+def log_per_class_accuracy(model: nn.Module,
+                          val_loader: torch.utils.data.DataLoader,
+                          device: torch.device,
+                          gesture_classes: Dict[int, str],
+                          logger) -> None:
+    """Log per-class accuracy on Quest 3 validation set.
+
+    Args:
+        model: Trained model
+        val_loader: Validation dataloader
+        device: Device to run on
+        gesture_classes: Dict mapping class IDs to names
+        logger: Logger instance
+    """
+    model.eval()
+    class_correct = {}
+    class_total = {}
+
+    with torch.no_grad():
+        for batch_data, labels in val_loader:
+            # Quest 3: batch_data is (windows), split into RGB and mask
+            rgb = batch_data[:, :, :3].to(device)
+            mask = batch_data[:, :, 3:].to(device)
+            labels = labels.to(device)
+
+            outputs = model(rgb, mask)
+            # Average over sequence for classification (Quest 3)
+            logits = outputs.mean(dim=1)  # (B, num_classes)
+            predictions = torch.argmax(logits, dim=1)
+
+            # Count per-class accuracy
+            for pred, true in zip(predictions.cpu().numpy(), labels.cpu().numpy()):
+                class_id = true
+                if class_id not in class_correct:
+                    class_correct[class_id] = 0
+                    class_total[class_id] = 0
+                class_total[class_id] += 1
+                if pred == true:
+                    class_correct[class_id] += 1
+
+    # Log per-class accuracy
+    logger.info("Per-class validation accuracy:")
+    for class_id in sorted(gesture_classes.keys()):
+        if class_id in class_correct:
+            accuracy = class_correct[class_id] / class_total[class_id]
+            class_name = gesture_classes[class_id]
+            logger.info(f"  {class_name}: {accuracy:.4f} ({class_correct[class_id]}/{class_total[class_id]})")
 
 
 def train_epoch(
@@ -23,49 +76,62 @@ def train_epoch(
     optimizer: optim.Optimizer,
     criterion: nn.Module,
     device: torch.device,
-    gradient_clip_norm: float = 1.0
+    scheduler: Optional[optim.lr_scheduler._LRScheduler] = None
 ) -> Tuple[float, float]:
     """Train model for one epoch.
-    
+
     Args:
-        model: PyTorch model.
-        train_loader: Training dataloader.
-        optimizer: Optimizer.
-        criterion: Loss function.
-        device: Device to run on.
-        gradient_clip_norm: Gradient clipping norm.
-        
+        model: Gesture spotting model
+        train_loader: Training dataloader
+        optimizer: AdamW optimizer
+        criterion: Weighted CrossEntropyLoss
+        device: Training device
+        scheduler: Learning rate scheduler (optional)
+
     Returns:
-        Tuple of (average_loss, accuracy).
+        Tuple of (average_loss, accuracy)
     """
     model.train()
     total_loss = 0.0
     correct = 0
     total = 0
-    
-    for batch_idx, (sequences, labels) in enumerate(train_loader):
-        sequences = sequences.to(device)
-        labels = labels.to(device)
-        
-        # Forward pass
+
+    for batch_idx, (windows, labels) in enumerate(train_loader):
+        # Split windows into RGB and mask channels - QUEST 3 FORMAT
+        rgb = windows[:, :, :3].to(device)    # (B, 30, 3, 224, 224) for Quest 3
+        mask = windows[:, :, 3:].to(device)   # (B, 30, 1, 224, 224) for Quest 3
+        labels = labels.to(device)            # (B,)
+
+        # Forward pass - correct format for Quest 3
         optimizer.zero_grad()
-        logits = model(sequences)
-        loss = criterion(logits, labels)
-        
+        outputs = model(rgb, mask)     # (B, 30, num_classes)
+
+        # Average over sequence for classification (Quest 3)
+        logits = outputs.mean(dim=1)   # (B, num_classes)
+
+        # For Quest 3, logits is already (B, num_classes) after averaging
+        logits_flat = logits  # (B, num_classes)
+        labels_flat = labels  # (B,)
+
+        # Compute loss
+        loss = criterion(logits_flat, labels_flat)
+
         # Backward pass
         loss.backward()
-        nn.utils.clip_grad_norm_(model.parameters(), gradient_clip_norm)
+        model.clip_gradients(TRAIN_CONFIG['gradient_clip_norm'])  # Use model's gradient clipping
         optimizer.step()
-        
+
+        # Learning rate scheduling handled after validation for ReduceLROnPlateau
+
         # Metrics
         total_loss += loss.item()
-        predictions = torch.argmax(logits, dim=1)
-        correct += (predictions == labels).sum().item()
-        total += labels.size(0)
-    
+        predictions = torch.argmax(logits_flat, dim=1)
+        correct += (predictions == labels_flat).sum().item()
+        total += labels_flat.size(0)
+
     avg_loss = total_loss / len(train_loader)
     accuracy = correct / total
-    
+
     return avg_loss, accuracy
 
 
@@ -75,216 +141,236 @@ def validate(
     criterion: nn.Module,
     device: torch.device
 ) -> Tuple[float, float]:
-    """Validate model on validation set.
-    
+    """Validate model on Quest 3 validation set.
+
     Args:
-        model: PyTorch model.
-        val_loader: Validation dataloader.
-        criterion: Loss function.
-        device: Device to run on.
-        
+        model: Gesture spotting model
+        val_loader: Validation dataloader
+        criterion: Loss function
+        device: Device to run on
+
     Returns:
-        Tuple of (average_loss, accuracy).
+        Tuple of (average_loss, accuracy)
     """
     model.eval()
     total_loss = 0.0
     correct = 0
     total = 0
-    
+
     with torch.no_grad():
-        for sequences, labels in val_loader:
-            sequences = sequences.to(device)
+        for batch_data, labels in val_loader:
+            # Quest 3: batch_data is (windows), split into RGB and mask
+            rgb = batch_data[:, :, :3].to(device)
+            mask = batch_data[:, :, 3:].to(device)
             labels = labels.to(device)
-            
-            logits = model(sequences)
+
+            outputs = model(rgb, mask)
+            # Average over sequence for classification (Quest 3)
+            logits = outputs.mean(dim=1)  # (B, num_classes)
+
             loss = criterion(logits, labels)
-            
             total_loss += loss.item()
+
             predictions = torch.argmax(logits, dim=1)
             correct += (predictions == labels).sum().item()
             total += labels.size(0)
-    
+
     avg_loss = total_loss / len(val_loader)
     accuracy = correct / total
-    
+
     return avg_loss, accuracy
 
 
-def train_transformer(
-    train_loader: Optional[torch.utils.data.DataLoader] = None,
-    val_loader: Optional[torch.utils.data.DataLoader] = None,
-    test_loader: Optional[torch.utils.data.DataLoader] = None,
-    num_epochs: Optional[int] = None,
-    learning_rate: Optional[float] = None,
-    weight_decay: Optional[float] = None,
+def train_model(
+    num_epochs: int = 10,
+    batch_size: int = 2,
+    learning_rate: float = 1e-4,
     device: Optional[torch.device] = None
 ) -> Dict[str, Any]:
-    """Complete training pipeline with flexible pretraining options.
-    
-    Supports:
-    - Pretraining on 8 Quest3-mapped gestures
-    - Pretraining on all 27 Jester gestures
-    - Pretraining on custom gesture subset
-    
+    """Complete training pipeline for Quest 3 gesture recognition.
+
     Args:
-        train_loader: Training dataloader
-        val_loader: Validation dataloader
-        test_loader: Test dataloader
         num_epochs: Number of training epochs
-        learning_rate: Learning rate
-        weight_decay: Weight decay
-        device: Device to train on
-        
+        batch_size: Batch size for dataloaders
+        learning_rate: Learning rate for AdamW
+        device: Training device
+
     Returns:
-        Dictionary with training results
+        Dictionary with training results and metrics
     """
     logger = setup_logging()
-    
-    # Use defaults from config if not provided
-    if num_epochs is None:
-        num_epochs = TRAIN_CONFIG['num_epochs']
-    if learning_rate is None:
-        learning_rate = TRAIN_CONFIG['learning_rate']
-    if weight_decay is None:
-        weight_decay = TRAIN_CONFIG['weight_decay']
+
     if device is None:
         device = DEVICE
-    
-    # Set random seeds for reproducibility
-    set_random_seeds(TRAIN_CONFIG['seed'])
-    
+
+    # Create Quest 3 dataloaders
+    train_loader, val_loader, test_loader = get_quest3_dataloaders(batch_size=batch_size, num_workers=0)
+    num_classes = NUM_QUEST3_CLASSES
+    dataset_name = "Quest 3"
+    gesture_classes = QUEST3_GESTURES
+
     logger.info("="*70)
-    logger.info("STARTING TRAINING PIPELINE")
+    logger.info("QUEST 3 GESTURE SPOTTING TRAINING")
     logger.info("="*70)
-    logger.info(f"\nPretraining Mode: {PRETRAINING_MODE}")
-    logger.info(f"Number of Classes: {NUM_CLASSES}")
-    
-    # Log pretraining configuration
-    if PRETRAINING_MODE == "quest3":
-        logger.info("Pretraining on 8 Quest3-mapped gestures:")
-        for gesture_id in SELECTED_GESTURE_IDS:
-            gesture_name = JESTER_CLASSES[gesture_id]
-            logger.info(f"  {gesture_id}: {gesture_name}")
-    elif PRETRAINING_MODE == "jester":
-        logger.info(f"Pretraining on all {NUM_CLASSES} Jester gestures")
-    else:
-        logger.info(f"Pretraining on custom {NUM_CLASSES} gestures: {SELECTED_GESTURE_IDS}")
-    
-    # Load or preprocess data if not provided
-    if train_loader is None or val_loader is None:
-        logger.info("\nLoading preprocessed data...")
-        from .dataset import JESTER_PROCESSED_DIR
-        if not (JESTER_PROCESSED_DIR / 'train.pt').exists():
-            logger.info("Preprocessed data not found. Running preprocessing...")
-            train_loader, val_loader, test_loader = preprocess_jester_dataset()
-        else:
-            train_loader, val_loader, test_loader = load_preprocessed_data()
-    
+    logger.info(f"Dataset: {dataset_name}")
+    logger.info(f"Classes: {num_classes} (8 Quest 3 gestures)")
+    logger.info(f"Model: Multi-modal Transformer")
+    logger.info(f"Device: {device}")
+    logger.info("="*70)
+
     # Create model
-    logger.info("\nCreating model...")
+    logger.info("Creating model...")
     model = create_model(
-        num_classes=NUM_CLASSES,
+        num_classes=num_classes,
+        backbone=MODEL_CONFIG.get('backbone', 'resnet18'),
+        rgb_pretrained=MODEL_CONFIG['rgb_pretrained'],
+        mask_pretrained=MODEL_CONFIG['mask_pretrained'],
+        fusion_dim=MODEL_CONFIG['fusion_dim'],
+        hidden_dim=MODEL_CONFIG['hidden_dim'],
+        num_heads=MODEL_CONFIG['num_heads'],
+        num_layers=MODEL_CONFIG['num_layers'],
+        feedforward_dim=MODEL_CONFIG['feedforward_dim'],
+        dropout=MODEL_CONFIG['dropout'],
         device=device
     )
+
     num_params = count_parameters(model)
-    logger.info(f"Model created with {num_params:,} parameters")
-    
-    # Create optimizer and loss function
-    optimizer = optim.Adam(model.parameters(), lr=learning_rate, weight_decay=weight_decay)
-    criterion = nn.CrossEntropyLoss()
+    logger.info(f"Model parameters: {num_params:,}")
+
+    # Create optimizer (AdamW)
+    optimizer = optim.AdamW(
+        model.parameters(),
+        lr=learning_rate,
+        weight_decay=TRAIN_CONFIG['weight_decay'],
+        betas=(0.9, 0.999),
+        eps=1e-8
+    )
+
+    # Create learning rate scheduler (Cosine Annealing with Warm Restarts)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(
         optimizer,
-        mode='min',
-        factor=0.5,
-        patience=5
+        mode='min',           # Monitor loss (minimize)
+        factor=0.5,           # Multiply LR by 0.5 when plateauing
+        patience=5,           # Wait 5 epochs without improvement
+        min_lr=1e-6           # Minimum LR floor
     )
-    
+
+    # Create loss function for Quest 3
+    criterion = nn.CrossEntropyLoss(label_smoothing=0.1)
+
     # Training loop
-    logger.info("\n" + "="*70)
-    logger.info("TRAINING")
+    logger.info("\nStarting training...")
     logger.info("="*70)
-    
+
     best_val_loss = float('inf')
-    best_epoch = 0
     patience_counter = 0
-    training_history = {
+    history = {
         'train_loss': [],
         'train_acc': [],
         'val_loss': [],
         'val_acc': [],
     }
-    
+
     start_time = time.time()
-    
+
     for epoch in range(num_epochs):
         epoch_start_time = time.time()
-        
-        # Train
+
+        # Train epoch
         train_loss, train_acc = train_epoch(
-            model, train_loader, optimizer, criterion, device,
-            gradient_clip_norm=TRAIN_CONFIG['gradient_clip_norm']
+            model, train_loader, optimizer, criterion, device, scheduler
         )
-        
+
         # Validate
         val_loss, val_acc = validate(model, val_loader, criterion, device)
-        
-        # Learning rate scheduling
+
+        # Step learning rate scheduler
         scheduler.step(val_loss)
-        
+
+        # Calculate train-val gap
+        train_val_gap = train_acc - val_acc
+
         # Store history
-        training_history['train_loss'].append(train_loss)
-        training_history['train_acc'].append(train_acc)
-        training_history['val_loss'].append(val_loss)
-        training_history['val_acc'].append(val_acc)
-        
+        history['train_loss'].append(train_loss)
+        history['train_acc'].append(train_acc)
+        history['val_loss'].append(val_loss)
+        history['val_acc'].append(val_acc)
+        history['train_val_gap'] = history.get('train_val_gap', []) + [train_val_gap]
+
         epoch_time = time.time() - epoch_start_time
-        
+
         logger.info(
             f"Epoch {epoch+1:3d}/{num_epochs} | "
             f"Train Loss: {train_loss:.4f}, Acc: {train_acc:.4f} | "
             f"Val Loss: {val_loss:.4f}, Acc: {val_acc:.4f} | "
+            f"Gap: {train_val_gap:.3f} | "
             f"Time: {format_time(epoch_time)}"
         )
-        
-        # Early stopping
+
+        # Enhanced early stopping for Quest 3
+        should_stop = False
+        stop_reason = ""
+
         if val_loss < best_val_loss:
             best_val_loss = val_loss
-            best_epoch = epoch + 1
             patience_counter = 0
-            
-            # Save best model
             torch.save(model.state_dict(), BEST_MODEL_PATH)
             logger.info(f"  ✓ Best model saved (val_loss: {val_loss:.4f})")
         else:
             patience_counter += 1
-            if patience_counter >= TRAIN_CONFIG['patience']:
-                logger.info(f"Early stopping at epoch {epoch+1}")
-                break
-    
+
+        # Check for severe overfitting (train-val gap > 30%)
+        if train_val_gap > 0.30:
+            should_stop = True
+            stop_reason = f"severe overfitting (gap: {train_val_gap:.3f})"
+
+        # Check for potential overfitting (validation accuracy reaches 100%)
+        elif val_acc >= 1.0:
+            logger.warning("Validation accuracy reached 100% - possible overfitting")
+            # Don't stop, but log warning
+
+        # Standard early stopping
+        if patience_counter >= TRAIN_CONFIG['patience']:
+            should_stop = True
+            stop_reason = "patience exceeded"
+
+        if should_stop:
+            logger.info(f"Early stopping at epoch {epoch+1} ({stop_reason})")
+            break
+
+        # Log per-class accuracy every 5 epochs
+        if (epoch + 1) % 5 == 0:
+            log_per_class_accuracy(model, val_loader, device, gesture_classes, logger)
+
     total_time = time.time() - start_time
-    
+
     logger.info("\n" + "="*70)
-    logger.info("TRAINING COMPLETE")
+    logger.info("TRAINING COMPLETED")
     logger.info("="*70)
-    logger.info(f"Best epoch: {best_epoch} (val_loss: {best_val_loss:.4f})")
     logger.info(f"Total training time: {format_time(total_time)}")
-    logger.info(f"Pretraining mode: {PRETRAINING_MODE}")
-    logger.info(f"Number of classes: {NUM_CLASSES}")
-    
-    # Load best model
-    logger.info(f"\nLoading best model from epoch {best_epoch}...")
+    logger.info(f"Best validation loss: {best_val_loss:.4f}")
+    logger.info(f"Model saved to: {BEST_MODEL_PATH}")
+
+    # Load best model and evaluate on test set
     model.load_state_dict(torch.load(BEST_MODEL_PATH))
-    
+    test_loss, test_acc = validate(model, test_loader, criterion, device)
+
+    logger.info("\nTest Results:")
+    logger.info(f"  Loss: {test_loss:.4f}")
+    logger.info(f"  Accuracy: {test_acc:.4f}")
+
     # Save final model
     torch.save(model.state_dict(), FINAL_MODEL_PATH)
-    logger.info(f"Final model saved to {FINAL_MODEL_PATH}")
-    
-    # Test on test set if provided
-    if test_loader is not None:
-        logger.info("\nEvaluating on test set...")
-        test_loss, test_acc = validate(model, test_loader, criterion, device)
-        logger.info(f"Test Loss: {test_loss:.4f}, Test Accuracy: {test_acc:.4f}")
-        training_history['test_loss'] = test_loss
-        training_history['test_acc'] = test_acc
-    
-    return training_history
+    logger.info(f"Final model saved to: {FINAL_MODEL_PATH}")
+
+    # Add test results to history
+    history['test_loss'] = test_loss
+    history['test_acc'] = test_acc
+
+    # Save training history to JSON
+    history_path = RESULTS_DIR / "quest3_training_history.json"
+    with open(history_path, 'w') as f:
+        json.dump(history, f, indent=2)
+    logger.info(f"Training history saved to: {history_path}")
+
+    return history
