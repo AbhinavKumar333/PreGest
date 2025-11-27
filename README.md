@@ -119,7 +119,7 @@ python main.py train --epochs 50 --batch-size 1 --learning-rate 5e-5
 ### Advanced Options
 ```bash
 # Evaluate specific model
-python main.py evaluate --model-path models/custom_model.pth
+python main.py evaluate --model-path models/quest3_transformer_best.pth
 
 # Skip preprocessing (use existing processed data)
 python main.py train  # (assumes preprocess already ran)
