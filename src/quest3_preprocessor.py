@@ -42,40 +42,51 @@ def extract_frames(video_path: Path, fps: int = 30) -> List[np.ndarray]:
     Returns:
         List of RGB frames as numpy arrays
     """
-    cap = cv2.VideoCapture(str(video_path))
-    if not cap.isOpened():
-        raise ValueError(f"Could not open video: {video_path}")
+    try:
+        cap = cv2.VideoCapture(str(video_path))
+        if not cap.isOpened():
+            raise ValueError(f"Could not open video: {video_path}")
 
-    # Get video properties
-    video_fps = cap.get(cv2.CAP_PROP_FPS)
-    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        # Get video properties
+        video_fps = cap.get(cv2.CAP_PROP_FPS)
+        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        
+        # Validate video properties
+        if video_fps <= 0 or total_frames <= 0:
+            cap.release()
+            raise ValueError(f"Invalid video properties: fps={video_fps}, frames={total_frames}")
 
-    # Calculate frame sampling interval
-    if video_fps <= fps:
-        # Video FPS is lower or equal, take all frames
-        interval = 1
-    else:
-        # Sample frames to match target FPS
-        interval = max(1, int(video_fps / fps))
+        # Calculate frame sampling interval
+        if video_fps <= fps:
+            # Video FPS is lower or equal, take all frames
+            interval = 1
+        else:
+            # Sample frames to match target FPS
+            interval = max(1, int(video_fps / fps))
 
-    frames = []
-    frame_count = 0
+        frames = []
+        frame_count = 0
 
-    while True:
-        ret, frame = cap.read()
-        if not ret:
-            break
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                break
 
-        # Sample frames at the calculated interval
-        if frame_count % interval == 0:
-            # Convert BGR to RGB
-            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            frames.append(frame_rgb)
+            # Sample frames at the calculated interval
+            if frame_count % interval == 0:
+                # Convert BGR to RGB
+                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                frames.append(frame_rgb)
 
-        frame_count += 1
+            frame_count += 1
 
-    cap.release()
-    return frames
+        cap.release()
+        return frames
+        
+    except cv2.error as e:
+        raise ValueError(f"OpenCV error reading video {video_path}: {e}")
+    except Exception as e:
+        raise ValueError(f"Error extracting frames from {video_path}: {e}")
 
 
 def resize_and_normalize_frames(frames: List[np.ndarray],
