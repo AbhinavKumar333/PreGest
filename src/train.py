@@ -40,10 +40,10 @@ def log_per_class_accuracy(model: nn.Module,
     class_total = {}
 
     with torch.no_grad():
-        for batch_data, labels in val_loader:
-            # Quest 3: batch_data is (windows), split into RGB and mask
-            rgb = batch_data[:, :, :3].to(device)
-            mask = batch_data[:, :, 3:].to(device)
+        for windows, labels in val_loader:
+            # Quest 3: windows is (B, T, 4, 224, 224), split into RGB and mask
+            rgb = windows[:, :, :3].to(device)
+            mask = windows[:, :, 3:].to(device)
             labels = labels.to(device)
 
             outputs = model(rgb, mask)
@@ -158,10 +158,10 @@ def validate(
     total = 0
 
     with torch.no_grad():
-        for batch_data, labels in val_loader:
-            # Quest 3: batch_data is (windows), split into RGB and mask
-            rgb = batch_data[:, :, :3].to(device)
-            mask = batch_data[:, :, 3:].to(device)
+        for windows, labels in val_loader:
+            # Quest 3: windows is (B, T, 4, 224, 224), split into RGB and mask
+            rgb = windows[:, :, :3].to(device)
+            mask = windows[:, :, 3:].to(device)
             labels = labels.to(device)
 
             outputs = model(rgb, mask)
@@ -231,6 +231,7 @@ def train_model(
         num_layers=MODEL_CONFIG['num_layers'],
         feedforward_dim=MODEL_CONFIG['feedforward_dim'],
         dropout=MODEL_CONFIG['dropout'],
+        max_seq_len=MODEL_CONFIG['max_seq_len'],
         device=device
     )
 

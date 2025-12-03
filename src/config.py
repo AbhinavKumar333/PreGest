@@ -35,43 +35,43 @@ ACTIVE_DATASET = "quest3"  # Quest 3 only
 
 # Data configuration
 DATA_CONFIG = {
-    'seq_length': 60,              # 60-frame temporal windows for Quest 3
-    'image_size': (224, 224),      # Resized for ResNet18 input
-    'train_ratio': 0.8,            # 80% training for Quest 3
-    'val_ratio': 0.2,              # 20% validation for Quest 3
-    'test_ratio': 0.0,             # Test from separate directory for Quest 3
-    'lead_frames': 20,             # 20 frames before gesture onset
-    'gesture_frames': 40,          # 40 frames after gesture onset
+    'seq_length': 30,  # 30-frame temporal windows for Quest 3 (matches SEQUENCE_LENGTH)
+    'image_size': (224, 224),  # Resized for ResNet18 input
+    'train_ratio': 0.8,  # 80% training for Quest 3
+    'val_ratio': 0.2,  # 20% validation for Quest 3
+    'test_ratio': 0.0,  # Test from separate directory for Quest 3
+    'lead_frames': 20,  # 20 frames before gesture onset
+    'gesture_frames': 40,  # 40 frames after gesture onset
 }
 
 # Model configuration - Multi-modal Transformer
 MODEL_CONFIG = {
-    'backbone': 'resnet18',         # Changed from squeezenet for Quest 3
-    'rgb_pretrained': True,         # Use ImageNet pretrained for RGB encoder
-    'mask_pretrained': False,       # Train mask encoder from scratch
+    'backbone': 'resnet18',  # Changed from squeezenet for Quest 3
+    'rgb_pretrained': True,  # Use ImageNet pretrained for RGB encoder
+    'mask_pretrained': False,  # Train mask encoder from scratch
     'feature_dim': 512,
-    'fusion_dim': 256,              # Reduced from 64 for Quest 3
-    'hidden_dim': 256,              # Reduced from 128 for Quest 3
-    'num_heads': 4,                 # Increased from 2 for Quest 3
-    'num_layers': 2,                # Same as before
-    'feedforward_dim': 512,         # Increased from 128 for Quest 3
-    'dropout': 0.5,                 # Increased from 0.4 for Quest 3
-    'max_seq_len': 60,              # Maximum sequence length
+    'fusion_dim': 256,  # Reduced from 64 for Quest 3
+    'hidden_dim': 256,  # Reduced from 128 for Quest 3
+    'num_heads': 4,  # Increased from 2 for Quest 3
+    'num_layers': 2,  # Same as before
+    'feedforward_dim': 512,  # Increased from 128 for Quest 3
+    'dropout': 0.5,  # Increased from 0.4 for Quest 3
+    'max_seq_len': 30,  # Maximum sequence length (matches SEQUENCE_LENGTH)
     'num_classes': NUM_QUEST3_CLASSES,
 }
 
 # Training configuration
 TRAIN_CONFIG = {
-    'batch_size': 2,                # Optimized for MPS memory (M4 GPU training)
-    'learning_rate': 1e-4,          # Learning rate for Quest 3
-    'weight_decay': 1e-4,           # L2 regularization for Quest 3
-    'num_epochs': 50,               # Maximum training epochs for Quest 3
-    'patience': 7,                  # Early stopping patience for Quest 3
-    'gradient_clip_norm': 1.0,      # Gradient clipping
+    'batch_size': 2,  # Optimized for MPS memory (M4 GPU training)
+    'learning_rate': 1e-4,  # Learning rate for Quest 3
+    'weight_decay': 1e-4,  # L2 regularization for Quest 3
+    'num_epochs': 50,  # Maximum training epochs for Quest 3
+    'patience': 7,  # Early stopping patience for Quest 3
+    'gradient_clip_norm': 1.0,  # Gradient clipping
     'scheduler_patience': 5,
-    'warmup_epochs': 3,             # Learning rate warmup
-    'seed': 42,                     # Random seed
-    'class_weights': None,          # No class weights for Quest 3 (balanced)
+    'warmup_epochs': 3,  # Learning rate warmup
+    'seed': 42,  # Random seed
+    'class_weights': None,  # No class weights for Quest 3 (balanced)
 }
 
 # Sequence Parameters
@@ -83,22 +83,22 @@ NUM_CHANNELS = 4  # RGB (3) + mask (1)
 AUGMENTATION_CONFIG = {
     'enable': True,
     'color_jitter': {
-        'brightness': 0.4,          # ±40% brightness change
-        'contrast': 0.4,            # ±40% contrast change
-        'saturation': 0.4,          # ±40% saturation change
-        'hue': 0.2,                 # ±20° hue shift
+        'brightness': 0.4,  # ±40% brightness change
+        'contrast': 0.4,  # ±40% contrast change
+        'saturation': 0.4,  # ±40% saturation change
+        'hue': 0.2,  # ±20° hue shift
     },
     'geometric': {
         'rotation_range': (-8, 8),  # ±8° rotation (realistic camera tilt)
-        'scale_range': (0.97, 1.03), # ±3% scaling (slight zoom)
+        'scale_range': (0.97, 1.03),  # ±3% scaling (slight zoom)
         'translate_range': (-0.02, 0.02),  # ±2% translation
     },
     'noise': {
-        'gaussian_std': 0.01,       # 1% Gaussian noise
+        'gaussian_std': 0.01,  # 1% Gaussian noise
     },
     'temporal': {
-        'dropout_prob': 0.05,       # 5% frame dropout
-        'speed_range': (0.95, 1.05), # ±5% speed variation
+        'dropout_prob': 0.05,  # 5% frame dropout
+        'speed_range': (0.95, 1.05),  # ±5% speed variation
     },
 }
 
@@ -111,8 +111,6 @@ LOG_FILE = LOG_DIR / "training_quest3.log"
 SEED = TRAIN_CONFIG['seed']
 
 # Device - Auto-detect optimal device for training
-import torch
-
 def get_optimal_device():
     """Get the best available device for training."""
     if torch.cuda.is_available():

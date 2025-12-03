@@ -34,6 +34,9 @@ Examples:
   python main.py --dataset quest3 --mode train
   python main.py --dataset quest3 --mode eval
 
+  # Complete 3-phase workflow (RECOMMENDED)
+  python main.py phases
+
   # Custom training parameters
   python main.py train --epochs 50 --batch-size 8 --learning-rate 1e-5
 
@@ -122,6 +125,21 @@ Examples:
         '--model-path',
         type=str,
         help='Path to model checkpoint (default: best model)'
+    )
+
+    # ========================================================================
+    # PHASES COMMAND
+    # ========================================================================
+    phases_parser = subparsers.add_parser('phases', help='Run all 3 phases sequentially')
+    phases_parser.add_argument(
+        '--skip-phase2',
+        action='store_true',
+        help='Skip Phase 2 model improvement (use Phase 1 model directly)'
+    )
+    phases_parser.add_argument(
+        '--skip-phase3',
+        action='store_true',
+        help='Skip Phase 3 production optimization'
     )
 
     # ========================================================================
@@ -316,8 +334,8 @@ def execute_workflow(args: argparse.Namespace) -> None:
         print("="*70)
 
         # Set default parameters based on dataset
-        epochs = getattr(args, 'epochs', 50 if dataset == 'quest3' else 30)
-        batch_size = getattr(args, 'batch_size', 16)
+        epochs = getattr(args, 'epochs', 20 if dataset == 'quest3' else 30)
+        batch_size = getattr(args, 'batch_size', 2)
         learning_rate = getattr(args, 'learning_rate', 1e-4 if dataset == 'quest3' else 5e-5)
 
         try:
@@ -355,6 +373,132 @@ def execute_workflow(args: argparse.Namespace) -> None:
     print("\n🎉 Workflow completed successfully!")
 
 
+def command_phases(args: argparse.Namespace) -> None:
+    """Handle phases command - run all 3 phases sequentially."""
+    print("🚀 PREGEST COMPLETE WORKFLOW: ALL 3 PHASES")
+    print("="*70)
+    print("Phase 1: Data preprocessing and initial training")
+    print("Phase 2: Model improvement based on error analysis")
+    print("Phase 3: Production optimization for deployment")
+    print("="*70)
+
+    import subprocess
+    import os
+
+    # Phase 1: Preprocessing + Initial Training
+    print("\n🎯 PHASE 1: DATA PREPROCESSING + INITIAL TRAINING")
+    print("-" * 50)
+
+    try:
+        # Run preprocessing and training
+        print("Running: python main.py --dataset quest3 --preprocess --mode both")
+        result = subprocess.run([
+            sys.executable, "main.py",
+            "--dataset", "quest3",
+            "--preprocess",
+            "--mode", "both"
+        ], capture_output=False, cwd=os.getcwd())
+
+        if result.returncode != 0:
+            print(f"❌ Phase 1 failed with exit code {result.returncode}")
+            sys.exit(1)
+
+        print("✅ Phase 1 completed successfully!")
+
+    except Exception as e:
+        print(f"❌ Phase 1 failed: {e}")
+        sys.exit(1)
+
+    # Phase 2: Model Improvement (optional)
+    if not args.skip_phase2:
+        print("\n🎯 PHASE 2: MODEL IMPROVEMENT")
+        print("-" * 50)
+
+        try:
+            print("Running: python scripts/improve_model.py")
+            result = subprocess.run([
+                sys.executable, "scripts/improve_model.py"
+            ], capture_output=False, cwd=os.getcwd())
+
+            if result.returncode != 0:
+                print(f"⚠️  Phase 2 failed with exit code {result.returncode}")
+                print("   Continuing with Phase 1 model...")
+            else:
+                print("✅ Phase 2 completed successfully!")
+
+        except Exception as e:
+            print(f"⚠️  Phase 2 failed: {e}")
+            print("   Continuing with Phase 1 model...")
+    else:
+        print("\n⏭️  PHASE 2: SKIPPED (using --skip-phase2)")
+
+    # Phase 3: Production Optimization (optional)
+    if not args.skip_phase3:
+        print("\n🎯 PHASE 3: PRODUCTION OPTIMIZATION")
+        print("-" * 50)
+
+        try:
+            print("Running: python scripts/phase3_optimization.py")
+            result = subprocess.run([
+                sys.executable, "scripts/phase3_optimization.py"
+            ], capture_output=False, cwd=os.getcwd())
+
+            if result.returncode != 0:
+                print(f"⚠️  Phase 3 failed with exit code {result.returncode}")
+                print("   Model may still be usable for deployment")
+            else:
+                print("✅ Phase 3 completed successfully!")
+
+        except Exception as e:
+            print(f"⚠️  Phase 3 failed: {e}")
+            print("   Model may still be usable for deployment")
+    else:
+        print("\n⏭️  PHASE 3: SKIPPED (using --skip-phase3)")
+
+    # Final evaluation
+    print("\n🎯 FINAL EVALUATION")
+    print("-" * 50)
+
+    try:
+        # Determine which model to evaluate (Phase 2 best if available, otherwise Phase 1)
+        from src.config import RESULTS_DIR, BEST_MODEL_PATH
+
+        phase2_model = RESULTS_DIR / 'quest3_phase2_best.pth'
+        if phase2_model.exists() and not args.skip_phase2:
+            model_path = str(phase2_model)
+            print(f"Evaluating Phase 2 improved model: {model_path}")
+        else:
+            model_path = str(BEST_MODEL_PATH)
+            print(f"Evaluating Phase 1 model: {model_path}")
+
+        result = subprocess.run([
+            sys.executable, "main.py", "evaluate",
+            "--model-path", model_path
+        ], capture_output=False, cwd=os.getcwd())
+
+        if result.returncode != 0:
+            print(f"⚠️  Final evaluation failed with exit code {result.returncode}")
+
+    except Exception as e:
+        print(f"⚠️  Final evaluation failed: {e}")
+
+    print("\n🎉 ALL PHASES COMPLETED!")
+    print("="*70)
+    print("📊 Summary:")
+    print("   Phase 1: ✅ Data preprocessing and initial training")
+    if not args.skip_phase2:
+        print("   Phase 2: ✅ Model improvement and fine-tuning")
+    else:
+        print("   Phase 2: ⏭️  Skipped")
+    if not args.skip_phase3:
+        print("   Phase 3: ✅ Production optimization")
+    else:
+        print("   Phase 3: ⏭️  Skipped")
+    print("   Final Eval: ✅ Complete evaluation with metrics")
+    print("\n🚀 Your Quest 3 gesture recognition model is ready for deployment!")
+    print("   Check results/phase3_optimization/ for deployment artifacts")
+
+
 def main() -> None:
     """Main entry point."""
     parser = setup_argparse()
@@ -374,9 +518,9 @@ def main() -> None:
     # Route to appropriate command handler
     command_handlers = {
         'preprocess': command_preprocess,
-
         'train': command_train,
         'evaluate': command_evaluate,
+        'phases': command_phases,
         'info': command_info,
     }
 

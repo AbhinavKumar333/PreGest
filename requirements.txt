@@ -20,6 +20,13 @@ seaborn==0.13.2
 # Utilities
 tqdm==4.67.0
 python-dotenv==1.0.1
+psutil==5.9.8
+
+# Model Optimization (Phase 3)
+onnxruntime==1.18.0
+onnxruntime-tools==1.7.0
+onnxconverter-common==1.16.0
+GPUtil==1.4.0
 
 # SKIP scikit-learn and scipy (not Python 3.12 compatible)
 # We'll install alternatives or refactor code
