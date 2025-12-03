@@ -100,8 +100,11 @@ data/quest3/raw/test/  # (same structure)
 
 ### Step 3: Run Complete Pipeline
 ```bash
-# One command does everything:
+# Option 1: Traditional workflow (Phase 1 only)
 python main.py --dataset quest3 --preprocess --mode both
+
+# Option 2: Complete 3-phase workflow (RECOMMENDED)
+python main.py phases
 ```
 
 ### Custom Training Parameters
@@ -124,6 +127,40 @@ python main.py evaluate --model-path models/custom_model.pth
 # Skip preprocessing (use existing processed data)
 python main.py train  # (assumes preprocess already ran)
 ```
+
+### 3-Phase Complete Workflow
+
+PreGest now supports a **streamlined 3-phase workflow** that automatically runs all optimization stages:
+
+```bash
+# Run all 3 phases automatically (RECOMMENDED)
+python main.py phases
+
+# Skip Phase 2 (model improvement) if not needed
+python main.py phases --skip-phase2
+
+# Skip Phase 3 (production optimization) for faster development
+python main.py phases --skip-phase3
+```
+
+#### Phase Details
+
+- **Phase 1**: Data preprocessing + Initial training (always required)
+- **Phase 2**: Model improvement based on error analysis (optional, ~2-4 hours)
+- **Phase 3**: Production optimization for deployment (optional, ~30 minutes)
+
+The `phases` command automatically:
+1. Preprocesses your Quest 3 video data
+2. Trains the initial model
+3. Analyzes errors and improves the model (Phase 2)
+4. Optimizes for production deployment (Phase 3)
+5. Runs final evaluation with comprehensive metrics
+
+**Benefits:**
+- ✅ **Single command** runs the complete pipeline
+- ✅ **Error handling** - continues even if phases fail
+- ✅ **Smart model selection** - uses best available model
+- ✅ **Production ready** - generates deployment artifacts
 
 ## Model Architecture
 
