@@ -1,16 +1,16 @@
 # PreGest: Quest 3 Gesture Recognition System
 
-** 92.52% Test Accuracy** • **Production Ready** • **Meta Quest 3 Deployable**
+**92.52% Test Accuracy** • **Production Ready** • **Meta Quest 3 Deployable**
 
 A streamlined implementation of real-time gesture recognition using Transformer Neural Networks, optimized for Meta Quest 3 deployment. PreGest achieves **industry-leading accuracy** through direct training on native Quest 3 gesture videos.
 
 ##  What's New
 
-- ** 92.52% Test Accuracy** - Highest accuracy for Quest 3 gesture recognition
-- ** Production Ready** - Clean, single-purpose Quest 3 focused codebase
-- ** 3-Command Workflow** - Simplified training and deployment
-- ** 24.9M Parameter Transformer** - Optimized for real-time inference
-- ** Meta Quest 3 Native** - Direct training on Quest 3 MP4 videos
+- **92.52% Test Accuracy** - Highest accuracy for Quest 3 gesture recognition
+- **Production Ready** - Clean, single-purpose Quest 3 focused codebase
+- **3-Command Workflow** - Simplified training and deployment
+- **24.9M Parameter Transformer** - Optimized for real-time inference
+- **Meta Quest 3 Native** - Direct training on Quest 3 MP4 videos
 
 ## Features
 
