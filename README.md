@@ -1,16 +1,16 @@
 # PreGest: Quest 3 Gesture Recognition System
 
-**🎯 92.52% Test Accuracy** • **Production Ready** • **Meta Quest 3 Deployable**
+** 92.52% Test Accuracy** • **Production Ready** • **Meta Quest 3 Deployable**
 
 A streamlined implementation of real-time gesture recognition using Transformer Neural Networks, optimized for Meta Quest 3 deployment. PreGest achieves **industry-leading accuracy** through direct training on native Quest 3 gesture videos.
 
-## 🚀 What's New
+##  What's New
 
-- **✅ 92.52% Test Accuracy** - Highest accuracy for Quest 3 gesture recognition
-- **✅ Production Ready** - Clean, single-purpose Quest 3 focused codebase
-- **✅ 3-Command Workflow** - Simplified training and deployment
-- **✅ 24.9M Parameter Transformer** - Optimized for real-time inference
-- **✅ Meta Quest 3 Native** - Direct training on Quest 3 MP4 videos
+- ** 92.52% Test Accuracy** - Highest accuracy for Quest 3 gesture recognition
+- ** Production Ready** - Clean, single-purpose Quest 3 focused codebase
+- ** 3-Command Workflow** - Simplified training and deployment
+- ** 24.9M Parameter Transformer** - Optimized for real-time inference
+- ** Meta Quest 3 Native** - Direct training on Quest 3 MP4 videos
 
 ## Features
 
@@ -81,7 +81,7 @@ pregest-quest3/
    chmod 600 ~/.kaggle/kaggle.json
    ```
 
-## 🚀 Usage
+##  Usage
 
 ### Step 1: Show System Info
 ```bash
@@ -157,10 +157,10 @@ The `phases` command automatically:
 5. Runs final evaluation with comprehensive metrics
 
 **Benefits:**
-- ✅ **Single command** runs the complete pipeline
-- ✅ **Error handling** - continues even if phases fail
-- ✅ **Smart model selection** - uses best available model
-- ✅ **Production ready** - generates deployment artifacts
+-  **Single command** runs the complete pipeline
+-  **Error handling** - continues even if phases fail
+-  **Smart model selection** - uses best available model
+-  **Production ready** - generates deployment artifacts
 
 ## Model Architecture
 
@@ -247,17 +247,17 @@ data/quest3/raw/
 
 
 
-## 📊 Results
+##  Results
 
 ### Production Performance (Achieved)
 
 From 10-epoch training on 213 Quest 3 videos (602 test samples):
-- **🎯 Test Accuracy**: **92.52%** ⭐ **(Industry Leading!)**
-- **🎯 Validation Accuracy**: **96.82%**
-- **🎯 Training Accuracy**: **94.48%**
-- **🏗️ Model Size**: **24.9M parameters**
-- **⏱️ Training Time**: **4 hours 26 minutes**
-- **⏱️ Preprocessing Time**: **~30 minutes** for full dataset
+- ** Test Accuracy**: **92.52%**  **(Industry Leading!)**
+- ** Validation Accuracy**: **96.82%**
+- ** Training Accuracy**: **94.48%**
+- ** Model Size**: **24.9M parameters**
+- ** Training Time**: **4 hours 26 minutes**
+- ** Preprocessing Time**: **~30 minutes** for full dataset
 
 ### Per-Class Performance (Test Set)
 ```
@@ -272,9 +272,9 @@ swipe_up:      98.0% (49/50)
 ```
 
 ### Performance Benchmark
-- **✅ Surpasses** research baselines for Quest 3 gestures
-- **✅ Ready** for production VR/AR deployment
-- **✅ Optimized** for real-time inference (<50ms target)
+- ** Surpasses** research baselines for Quest 3 gestures
+- ** Ready** for production VR/AR deployment
+- ** Optimized** for real-time inference (<50ms target)
 
 ### Key Files Generated
 
@@ -353,10 +353,10 @@ The code uses `pathlib.Path` for all file operations and has been tested on:
 ### Quest 3 Integration (Implemented)
 
 The system now supports **production-ready Quest 3 deployment**:
-- ✅ **8 Quest 3 gesture mapping** (Pinch Select, Grab, Release, etc.)
-- ✅ **Flexible pretraining modes** (Quest 3, Jester, Custom)
-- ✅ **Two-stage training** (Jester pretraining → Quest 3 fine-tuning)
-- ✅ **Mode-aware evaluation** with correct class names
+-  **8 Quest 3 gesture mapping** (Pinch Select, Grab, Release, etc.)
+-  **Flexible pretraining modes** (Quest 3, Jester, Custom)
+-  **Two-stage training** (Jester pretraining → Quest 3 fine-tuning)
+-  **Mode-aware evaluation** with correct class names
 
 ### Planned Enhancements
 
