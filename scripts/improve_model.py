@@ -230,7 +230,7 @@ def run_improved_training(improved_config, augmentation_config):
     patience_counter = 0
     history = {'train_loss': [], 'train_acc': [], 'val_loss': [], 'val_acc': []}
     
-    for epoch in range(2):  
+    for epoch in range(25):  
         epoch_start = time.time()
         
         # Training phase
