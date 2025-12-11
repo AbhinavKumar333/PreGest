@@ -144,12 +144,12 @@ def command_preprocess(args: argparse.Namespace) -> None:
 
     try:
         stats = preprocess_quest3_dataset()
-        print(f"\n✅ Preprocessing complete!")
+        print(f"\n Preprocessing complete!")
         print(f"   Videos processed: {stats['processed_videos']}")
         print(f"   Windows created: {stats['total_windows']}")
         print(f"   Next: python main.py train")
     except Exception as e:
-        print(f"❌ Preprocessing failed: {e}")
+        print(f" Preprocessing failed: {e}")
         sys.exit(1)
 
 
@@ -170,7 +170,7 @@ def command_train(args: argparse.Namespace) -> None:
         learning_rate=args.learning_rate
     )
 
-    print(f"\n✅ Training complete!")
+    print(f"\n Training complete!")
     print(f"   Test accuracy: {history['test_acc']:.4f}")
     print(f"   Next: python main.py evaluate")
 
@@ -182,11 +182,11 @@ def command_evaluate(args: argparse.Namespace) -> None:
     model_path = Path(args.model_path) if args.model_path else BEST_MODEL_PATH
 
     if not model_path.exists():
-        print(f"❌ Model not found: {model_path}")
+        print(f" Model not found: {model_path}")
         sys.exit(1)
 
     # Use Quest 3 dataset for evaluation since we trained with Quest 3
-    print(f"ℹ️  Using Quest 3 dataset for evaluation")
+    print(f" Using Quest 3 dataset for evaluation")
     from src import config
     config.ACTIVE_DATASET = "quest3"
 
@@ -195,11 +195,11 @@ def command_evaluate(args: argparse.Namespace) -> None:
         results = run_complete_evaluation(dataset="quest3", model_path=model_path)
 
         if results:
-            print(f"\n✅ Evaluation complete!")
-            print(f"   🎯 Overall accuracy: {results.get('overall_accuracy', 'N/A'):.4f}")
-            print(f"   🎯 Macro F1-score: {results.get('macro_f1', 'N/A'):.4f}")
-            print(f"   🎯 Weighted F1-score: {results.get('weighted_f1', 'N/A'):.4f}")
-            print(f"   ⚡ Throughput: {results.get('performance_metrics', {}).get('throughput_fps', 'N/A'):.1f} FPS")
+            print(f"\n Evaluation complete!")
+            print(f"   Overall accuracy: {results.get('overall_accuracy', 'N/A'):.4f}")
+            print(f"   Macro F1-score: {results.get('macro_f1', 'N/A'):.4f}")
+            print(f"   Weighted F1-score: {results.get('weighted_f1', 'N/A'):.4f}")
+            print(f"   Throughput: {results.get('performance_metrics', {}).get('throughput_fps', 'N/A'):.1f} FPS")
 
             # Show per-class metrics
             per_class = results.get('per_class_metrics', {})
@@ -210,9 +210,9 @@ def command_evaluate(args: argparse.Namespace) -> None:
                     support = metrics.get('support', 0)
                     print(f"   {class_name}: {f1:.3f} ({support} samples)")
         else:
-            print("❌ Evaluation failed - no results returned")
+            print(" Evaluation failed - no results returned")
     except Exception as e:
-        print(f"❌ Evaluation failed: {e}")
+        print(f" Evaluation failed: {e}")
         import traceback
         traceback.print_exc()
     finally:
@@ -228,7 +228,7 @@ def command_info(args: argparse.Namespace) -> None:
     model = create_model(num_classes=8)  
     total_params = count_parameters(model)
 
-    print("\n📊 Model Information:")
+    print("\n Model Information:")
     print(f"   Architecture: Multi-modal Transformer")
     print(f"   RGB Encoder: ResNet18 (pretrained)")
     print(f"   Mask Encoder: ResNet18 (random init)")
@@ -237,20 +237,20 @@ def command_info(args: argparse.Namespace) -> None:
     print(f"   Total Parameters: {total_params:,}")
 
     # Dataset info
-    print("\n📁 Dataset Information:")
+    print("\n Dataset Information:")
     print("   Name: Quest 3 Gesture Dataset")
     print("   Classes: 8 gestures")
     print("   Capture: Meta Quest 3 HMD")
     print("   Viewpoint: First-person (egocentric)")
     print("   Format: RGB + hand segmentation masks")
 
-    print("\n🎯 Quest 3 Gesture Classes:")
+    print("\n Quest 3 Gesture Classes:")
     gesture_names = ["flat_palm_stop", "grab", "pinch_select", "release", "swipe_down", "swipe_left", "swipe_right", "swipe_up"]
     for i, name in enumerate(gesture_names):
         print(f"   {i}: {name}")
 
     # Training config
-    print("\n⚙️  Training Configuration:")
+    print("\n Training Configuration:")
     print("   Sequence Length: 30 frames")
     print("   Image Size: 224×224")
     print("   Batch Size: 2 (MPS optimized)")
@@ -264,12 +264,12 @@ def command_info(args: argparse.Namespace) -> None:
         print(f"   GPU: {torch.cuda.get_device_name(0)}")
 
     # Performance info
-    print("\n🏆 Best Results:")
+    print("\n Best Results:")
     print("   Test Accuracy: 92.52%")
     print("   Training Time: 4h 26m")
 
     # File paths
-    print("\n📂 Important Paths:")
+    print("\n Important Paths:")
     print("   Raw Data: data/quest3/raw/")
     print("   Processed: data/quest3/processed/")
     print("   Models: models/")
@@ -281,7 +281,7 @@ def execute_workflow(args: argparse.Namespace) -> None:
     """Execute workflow based on global arguments"""
     dataset = args.dataset
 
-    print(f"🚀 Starting PreGest workflow")
+    print(f" Starting PreGest workflow")
     print(f"   Dataset: {dataset}")
     print(f"   Mode: {args.mode}")
     if args.preprocess:
@@ -295,11 +295,11 @@ def execute_workflow(args: argparse.Namespace) -> None:
         if dataset == "quest3":
             try:
                 stats = preprocess_quest3_dataset()
-                print("✅ Quest 3 preprocessing completed!")
+                print(" Quest 3 preprocessing completed!")
                 print(f"   Videos processed: {stats['processed_videos']}")
                 print(f"   Windows created: {stats['total_windows']}")
             except Exception as e:
-                print(f"❌ Preprocessing failed: {e}")
+                print(f" Preprocessing failed: {e}")
                 sys.exit(1)
         else:
             print("Only Quest 3 datasets are supported!")
@@ -320,10 +320,10 @@ def execute_workflow(args: argparse.Namespace) -> None:
                 batch_size=batch_size,
                 learning_rate=learning_rate
             )
-            print("✅ Training completed!")
+            print(" Training completed!")
             print(f"   Final test accuracy: {history['test_acc']:.4f}")
         except Exception as e:
-            print(f"❌ Training failed: {e}")
+            print(f" Training failed: {e}")
             sys.exit(1)
 
     # Evaluation
@@ -333,29 +333,29 @@ def execute_workflow(args: argparse.Namespace) -> None:
         try:
             results = run_complete_evaluation(dataset=dataset)
             if results:
-                print("✅ Evaluation completed!")
+                print(" Evaluation completed!")
                 print(f"   Test accuracy: {results['overall_accuracy']:.4f}")
                 print(f"   Macro F1: {results['macro_f1']:.4f}")
                 print(f"   Throughput: {results['performance_metrics']['throughput_fps']:.1f} FPS")
             else:
-                print("❌ Evaluation failed!")
+                print(" Evaluation failed!")
                 sys.exit(1)
         except Exception as e:
-            print(f"❌ Evaluation failed: {e}")
+            print(f" Evaluation failed: {e}")
             sys.exit(1)
 
-    print("\n🎉 Workflow completed successfully!")
+    print("\n Workflow completed successfully!")
 
 
 def command_phases(args: argparse.Namespace) -> None:
     """Handle phases command - run all 3 phases sequentially"""
-    print("🚀 PREGEST COMPLETE WORKFLOW: ALL 3 PHASES")
+    print(" PREGEST COMPLETE WORKFLOW: ALL 3 PHASES")
     print("Phase 1: Data preprocessing and initial training")
     print("Phase 2: Model improvement based on error analysis")
     print("Phase 3: Production optimization for deployment")    
 
     # Phase 1: Preprocessing + Initial Training
-    print("\n🎯 PHASE 1: DATA PREPROCESSING + INITIAL TRAINING")
+    print("\nPHASE 1: DATA PREPROCESSING + INITIAL TRAINING")
 
     try:
         # Run preprocessing and training
@@ -368,18 +368,18 @@ def command_phases(args: argparse.Namespace) -> None:
         ], capture_output=False, cwd=os.getcwd())
 
         if result.returncode != 0:
-            print(f"❌ Phase 1 failed with exit code {result.returncode}")
+            print(f" Phase 1 failed with exit code {result.returncode}")
             sys.exit(1)
 
-        print("✅ Phase 1 completed successfully!")
+        print("Phase 1 completed successfully!")
 
     except Exception as e:
-        print(f"❌ Phase 1 failed: {e}")
+        print(f" Phase 1 failed: {e}")
         sys.exit(1)
 
     # Phase 2: Model Improvement
     if not args.skip_phase2:
-        print("\n🎯 PHASE 2: MODEL IMPROVEMENT")
+        print("\nPHASE 2: MODEL IMPROVEMENT")
 
         try:
             print("Running: python scripts/improve_model.py")
@@ -388,20 +388,20 @@ def command_phases(args: argparse.Namespace) -> None:
             ], capture_output=False, cwd=os.getcwd())
 
             if result.returncode != 0:
-                print(f"⚠️  Phase 2 failed with exit code {result.returncode}")
-                print("   Continuing with Phase 1 model...")
+                print(f" Phase 2 failed with exit code {result.returncode}")
+                print(" Continuing with Phase 1 model...")
             else:
-                print("✅ Phase 2 completed successfully!")
+                print(" Phase 2 completed successfully!")
 
         except Exception as e:
-            print(f"⚠️  Phase 2 failed: {e}")
-            print("   Continuing with Phase 1 model...")
+            print(f" Phase 2 failed: {e}")
+            print(" Continuing with Phase 1 model...")
     else:
-        print("\n⏭️  PHASE 2: SKIPPED (using --skip-phase2)")
+        print("\nPHASE 2: SKIPPED (using --skip-phase2)")
 
     # Phase 3: Production Optimization
     if not args.skip_phase3:
-        print("\n🎯 PHASE 3: PRODUCTION OPTIMIZATION")
+        print("\nPHASE 3: PRODUCTION OPTIMIZATION")
 
         try:
             print("Running: python scripts/phase3_optimization.py")
@@ -410,19 +410,19 @@ def command_phases(args: argparse.Namespace) -> None:
             ], capture_output=False, cwd=os.getcwd())
 
             if result.returncode != 0:
-                print(f"⚠️  Phase 3 failed with exit code {result.returncode}")
-                print("   Model may still be usable for deployment")
+                print(f" Phase 3 failed with exit code {result.returncode}")
+                print(" Model may still be usable for deployment")
             else:
-                print("✅ Phase 3 completed successfully!")
+                print(" Phase 3 completed successfully!")
 
         except Exception as e:
-            print(f"⚠️  Phase 3 failed: {e}")
-            print("   Model may still be usable for deployment")
+            print(f" Phase 3 failed: {e}")
+            print(" Model may still be usable for deployment")
     else:
-        print("\n⏭️  PHASE 3: SKIPPED (using --skip-phase3)")
+        print("\nPHASE 3: SKIPPED (using --skip-phase3)")
 
     # Final evaluation
-    print("\n🎯 FINAL EVALUATION")
+    print("\nFINAL EVALUATION")
 
     try:
         # Determine which model to evaluate  
@@ -440,24 +440,24 @@ def command_phases(args: argparse.Namespace) -> None:
         ], capture_output=False, cwd=os.getcwd())
 
         if result.returncode != 0:
-            print(f"⚠️  Final evaluation failed with exit code {result.returncode}")
+            print(f" Final evaluation failed with exit code {result.returncode}")
 
     except Exception as e:
-        print(f"⚠️  Final evaluation failed: {e}")
+        print(f" Final evaluation failed: {e}")
 
-    print("\n🎉 ALL PHASES COMPLETED!")
-    print("📊 Summary:")
-    print("   Phase 1: ✅ Data preprocessing and initial training")
+    print("\n ALL PHASES COMPLETED!")
+    print(" Summary:")
+    print("   Phase 1: Data preprocessing and initial training")
     if not args.skip_phase2:
-        print("   Phase 2: ✅ Model improvement and fine-tuning")
+        print("   Phase 2: Model improvement and fine-tuning")
     else:
-        print("   Phase 2: ⏭️  Skipped")
+        print("   Phase 2: Skipped")
     if not args.skip_phase3:
-        print("   Phase 3: ✅ Production optimization")
+        print("   Phase 3: Production optimization")
     else:
-        print("   Phase 3: ⏭️  Skipped")
-    print("   Final Eval: ✅ Complete evaluation with metrics")
-    print("\n🚀 Your Quest 3 gesture recognition model is ready for deployment!")
+        print("   Phase 3: Skipped")
+    print("   Final Eval: Complete evaluation with metrics")
+    print("\n Your Quest 3 gesture recognition model is ready for deployment!")
     print("   Check results/phase3_optimization/ for deployment artifacts")
 
 
