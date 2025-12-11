@@ -1,7 +1,4 @@
-"""
-Training pipeline for Quest 3 gesture recognition.
-Multi-modal gesture spotting with sequence-level classification.
-"""
+"""Training pipeline for Quest 3 gesture recognition"""
 
 import json
 import time
@@ -26,29 +23,21 @@ def log_per_class_accuracy(model: nn.Module,
                           device: torch.device,
                           gesture_classes: Dict[int, str],
                           logger) -> None:
-    """Log per-class accuracy on Quest 3 validation set.
-
-    Args:
-        model: Trained model
-        val_loader: Validation dataloader
-        device: Device to run on
-        gesture_classes: Dict mapping class IDs to names
-        logger: Logger instance
-    """
+    """Log per-class accuracy on Quest 3 validation set"""
     model.eval()
     class_correct = {}
     class_total = {}
 
     with torch.no_grad():
         for windows, labels in val_loader:
-            # Quest 3: windows is (B, T, 4, 224, 224), split into RGB and mask
+            # Quest 3 windows split into RGB and mask
             rgb = windows[:, :, :3].to(device)
             mask = windows[:, :, 3:].to(device)
             labels = labels.to(device)
 
             outputs = model(rgb, mask)
             # Average over sequence for classification (Quest 3)
-            logits = outputs.mean(dim=1)  # (B, num_classes)
+            logits = outputs.mean(dim=1)  
             predictions = torch.argmax(logits, dim=1)
 
             # Count per-class accuracy
@@ -78,50 +67,36 @@ def train_epoch(
     device: torch.device,
     scheduler: Optional[optim.lr_scheduler._LRScheduler] = None
 ) -> Tuple[float, float]:
-    """Train model for one epoch.
-
-    Args:
-        model: Gesture spotting model
-        train_loader: Training dataloader
-        optimizer: AdamW optimizer
-        criterion: Weighted CrossEntropyLoss
-        device: Training device
-        scheduler: Learning rate scheduler (optional)
-
-    Returns:
-        Tuple of (average_loss, accuracy)
-    """
+    """Train model for one epoch"""
     model.train()
     total_loss = 0.0
     correct = 0
     total = 0
 
     for batch_idx, (windows, labels) in enumerate(train_loader):
-        # Split windows into RGB and mask channels - QUEST 3 FORMAT
-        rgb = windows[:, :, :3].to(device)    # (B, 30, 3, 224, 224) for Quest 3
-        mask = windows[:, :, 3:].to(device)   # (B, 30, 1, 224, 224) for Quest 3
-        labels = labels.to(device)            # (B,)
+        # Split windows into RGB and mask channels 
+        rgb = windows[:, :, :3].to(device)    
+        mask = windows[:, :, 3:].to(device)   
+        labels = labels.to(device)            
 
-        # Forward pass - correct format for Quest 3
+        # Forward pass correct format for Quest 3
         optimizer.zero_grad()
-        outputs = model(rgb, mask)     # (B, 30, num_classes)
+        outputs = model(rgb, mask)     
 
         # Average over sequence for classification (Quest 3)
-        logits = outputs.mean(dim=1)   # (B, num_classes)
+        logits = outputs.mean(dim=1)   
 
-        # For Quest 3, logits is already (B, num_classes) after averaging
-        logits_flat = logits  # (B, num_classes)
-        labels_flat = labels  # (B,)
+        # For Quest 3 logits 
+        logits_flat = logits  
+        labels_flat = labels  
 
         # Compute loss
         loss = criterion(logits_flat, labels_flat)
 
         # Backward pass
         loss.backward()
-        model.clip_gradients(TRAIN_CONFIG['gradient_clip_norm'])  # Use model's gradient clipping
+        model.clip_gradients(TRAIN_CONFIG['gradient_clip_norm'])  
         optimizer.step()
-
-        # Learning rate scheduling handled after validation for ReduceLROnPlateau
 
         # Metrics
         total_loss += loss.item()
@@ -141,17 +116,7 @@ def validate(
     criterion: nn.Module,
     device: torch.device
 ) -> Tuple[float, float]:
-    """Validate model on Quest 3 validation set.
-
-    Args:
-        model: Gesture spotting model
-        val_loader: Validation dataloader
-        criterion: Loss function
-        device: Device to run on
-
-    Returns:
-        Tuple of (average_loss, accuracy)
-    """
+    """Validate model on Quest 3 validation set"""
     model.eval()
     total_loss = 0.0
     correct = 0
@@ -159,14 +124,14 @@ def validate(
 
     with torch.no_grad():
         for windows, labels in val_loader:
-            # Quest 3: windows is (B, T, 4, 224, 224), split into RGB and mask
+            # Quest 3 windows split into RGB and mask
             rgb = windows[:, :, :3].to(device)
             mask = windows[:, :, 3:].to(device)
             labels = labels.to(device)
 
             outputs = model(rgb, mask)
             # Average over sequence for classification (Quest 3)
-            logits = outputs.mean(dim=1)  # (B, num_classes)
+            logits = outputs.mean(dim=1)  
 
             loss = criterion(logits, labels)
             total_loss += loss.item()
@@ -187,17 +152,7 @@ def train_model(
     learning_rate: float = 1e-4,
     device: Optional[torch.device] = None
 ) -> Dict[str, Any]:
-    """Complete training pipeline for Quest 3 gesture recognition.
-
-    Args:
-        num_epochs: Number of training epochs
-        batch_size: Batch size for dataloaders
-        learning_rate: Learning rate for AdamW
-        device: Training device
-
-    Returns:
-        Dictionary with training results and metrics
-    """
+    """Complete training pipeline for Quest 3 gesture recognition"""
     logger = setup_logging()
 
     if device is None:
@@ -209,14 +164,11 @@ def train_model(
     dataset_name = "Quest 3"
     gesture_classes = QUEST3_GESTURES
 
-    logger.info("="*70)
     logger.info("QUEST 3 GESTURE SPOTTING TRAINING")
-    logger.info("="*70)
     logger.info(f"Dataset: {dataset_name}")
     logger.info(f"Classes: {num_classes} (8 Quest 3 gestures)")
     logger.info(f"Model: Multi-modal Transformer")
     logger.info(f"Device: {device}")
-    logger.info("="*70)
 
     # Create model
     logger.info("Creating model...")
@@ -238,7 +190,7 @@ def train_model(
     num_params = count_parameters(model)
     logger.info(f"Model parameters: {num_params:,}")
 
-    # Create optimizer (AdamW)
+    # Create optimizer 
     optimizer = optim.AdamW(
         model.parameters(),
         lr=learning_rate,
@@ -247,13 +199,13 @@ def train_model(
         eps=1e-8
     )
 
-    # Create learning rate scheduler (Cosine Annealing with Warm Restarts)
+    # Create learning rate scheduler 
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(
         optimizer,
-        mode='min',           # Monitor loss (minimize)
-        factor=0.5,           # Multiply LR by 0.5 when plateauing
-        patience=5,           # Wait 5 epochs without improvement
-        min_lr=1e-6           # Minimum LR floor
+        mode='min',           
+        factor=0.5,           
+        patience=5,           
+        min_lr=1e-6           
     )
 
     # Create loss function for Quest 3
@@ -261,7 +213,6 @@ def train_model(
 
     # Training loop
     logger.info("\nStarting training...")
-    logger.info("="*70)
 
     best_val_loss = float('inf')
     patience_counter = 0
@@ -320,15 +271,15 @@ def train_model(
         else:
             patience_counter += 1
 
-        # Check for severe overfitting (train-val gap > 30%)
+        # Check for severe overfitting 
         if train_val_gap > 0.30:
             should_stop = True
             stop_reason = f"severe overfitting (gap: {train_val_gap:.3f})"
 
-        # Check for potential overfitting (validation accuracy reaches 100%)
+        # Check for potential overfitting
         elif val_acc >= 1.0:
             logger.warning("Validation accuracy reached 100% - possible overfitting")
-            # Don't stop, but log warning
+            
 
         # Standard early stopping
         if patience_counter >= TRAIN_CONFIG['patience']:
@@ -345,9 +296,7 @@ def train_model(
 
     total_time = time.time() - start_time
 
-    logger.info("\n" + "="*70)
     logger.info("TRAINING COMPLETED")
-    logger.info("="*70)
     logger.info(f"Total training time: {format_time(total_time)}")
     logger.info(f"Best validation loss: {best_val_loss:.4f}")
     logger.info(f"Model saved to: {BEST_MODEL_PATH}")

@@ -1,7 +1,4 @@
-"""
-Quest 3 Video Preprocessor for Gesture Recognition
-Processes MP4 videos into model-ready tensors with hand segmentation.
-"""
+"""Quest 3 Video Preprocessor for Gesture Recognition"""
 
 import cv2
 import torch
@@ -14,8 +11,6 @@ from typing import Dict, List, Tuple, Optional
 from collections import defaultdict
 import random
 
-# Note: Using simplified skin color detection for now
-# Full MMPose integration can be added later with proper model setup
 
 from config import (
     QUEST3_RAW_DIR, QUEST3_PROCESSED_DIR, QUEST3_GESTURES,
@@ -24,7 +19,7 @@ from config import (
 
 
 def setup_logging():
-    """Set up logging for preprocessing."""
+    """Set up logging for preprocessing"""
     logging.basicConfig(
         level=logging.INFO,
         format='%(asctime)s - %(levelname)s - %(message)s'
@@ -33,15 +28,7 @@ def setup_logging():
 
 
 def extract_frames(video_path: Path, fps: int = 30) -> List[np.ndarray]:
-    """Extract frames from video at specified FPS.
-
-    Args:
-        video_path: Path to MP4 video file
-        fps: Target frames per second
-
-    Returns:
-        List of RGB frames as numpy arrays
-    """
+    """Extract frames from video at specified FPS"""
     try:
         cap = cv2.VideoCapture(str(video_path))
         if not cap.isOpened():
@@ -58,10 +45,8 @@ def extract_frames(video_path: Path, fps: int = 30) -> List[np.ndarray]:
 
         # Calculate frame sampling interval
         if video_fps <= fps:
-            # Video FPS is lower or equal, take all frames
             interval = 1
         else:
-            # Sample frames to match target FPS
             interval = max(1, int(video_fps / fps))
 
         frames = []
@@ -74,7 +59,6 @@ def extract_frames(video_path: Path, fps: int = 30) -> List[np.ndarray]:
 
             # Sample frames at the calculated interval
             if frame_count % interval == 0:
-                # Convert BGR to RGB
                 frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 frames.append(frame_rgb)
 
@@ -91,15 +75,7 @@ def extract_frames(video_path: Path, fps: int = 30) -> List[np.ndarray]:
 
 def resize_and_normalize_frames(frames: List[np.ndarray],
                                target_size: Tuple[int, int] = (224, 224)) -> torch.Tensor:
-    """Resize frames and apply ImageNet normalization.
-
-    Args:
-        frames: List of RGB frames
-        target_size: Target (height, width)
-
-    Returns:
-        Normalized tensor of shape (num_frames, 3, H, W)
-    """
+    """Resize frames and apply ImageNet normalization"""
     if not frames:
         return torch.empty(0, 3, target_size[0], target_size[1])
 
@@ -113,37 +89,23 @@ def resize_and_normalize_frames(frames: List[np.ndarray],
         # Resize frame
         resized = cv2.resize(frame, target_size, interpolation=cv2.INTER_LINEAR)
 
-        # Convert to float and normalize to [0, 1]
+        # Convert to float and normalize
         resized = resized.astype(np.float32) / 255.0
 
         # Apply ImageNet normalization
         normalized = (resized - mean) / std
 
-        # Convert to tensor and transpose to (C, H, W)
+        # Convert to tensor and transpose
         tensor_frame = torch.from_numpy(normalized).permute(2, 0, 1)
         processed_frames.append(tensor_frame)
 
-    # Stack into tensor (N, 3, H, W)
+    # Stack into tensor 
     return torch.stack(processed_frames)
 
 
 def generate_hand_mask(frame: np.ndarray) -> np.ndarray:
-    """Generate binary hand mask using OpenMMLab MMPose.
-
-    For now, this is a simplified implementation that creates masks
-    based on skin color detection as a fallback until full MMPose
-    integration is complete.
-
-    Args:
-        frame: RGB frame as numpy array
-
-    Returns:
-        Binary mask of shape (H, W) with hand pixels as 255, background as 0
-    """
+    """Generate binary hand mask using OpenMMLab MMPose"""
     try:
-        # For now, use a simple skin color-based detection
-        # This is a temporary implementation until MMPose is properly set up
-
         # Convert RGB to HSV for better skin color detection
         hsv = cv2.cvtColor(frame, cv2.COLOR_RGB2HSV)
 
@@ -163,22 +125,14 @@ def generate_hand_mask(frame: np.ndarray) -> np.ndarray:
 
     except Exception as e:
         print(f"Warning: Hand mask generation failed: {e}")
-        # Fallback: return empty mask
+        # return empty mask
         h, w = frame.shape[:2]
         return np.zeros((h, w), dtype=np.uint8)
 
 
 def process_video_frames(frames: List[np.ndarray],
                         logger: logging.Logger) -> Tuple[torch.Tensor, torch.Tensor, int]:
-    """Process frames to create RGB tensors and hand masks.
-
-    Args:
-        frames: List of RGB frames
-        logger: Logger for warnings
-
-    Returns:
-        Tuple of (rgb_tensor, mask_tensor, valid_frames_count)
-    """
+    """Process frames to create RGB tensors and hand masks"""
     if not frames:
         return torch.empty(0, 3, 224, 224), torch.empty(0, 1, 224, 224), 0
 
@@ -191,10 +145,10 @@ def process_video_frames(frames: List[np.ndarray],
             # Generate hand mask
             mask = generate_hand_mask(frame)
 
-            # Resize mask to 224x224
+            # Resize mask
             mask_resized = cv2.resize(mask, (224, 224), interpolation=cv2.INTER_NEAREST)
 
-            # Convert mask to tensor (1, H, W)
+            # Convert mask to tensor 
             mask_tensor = torch.from_numpy(mask_resized).unsqueeze(0).float() / 255.0
 
             # Resize and normalize RGB frame
@@ -218,8 +172,8 @@ def process_video_frames(frames: List[np.ndarray],
         return torch.empty(0, 3, 224, 224), torch.empty(0, 1, 224, 224), 0
 
     # Stack frames
-    rgb_tensor = torch.stack(rgb_frames)  # (N, 3, 224, 224)
-    mask_tensor = torch.stack(mask_frames)  # (N, 1, 224, 224)
+    rgb_tensor = torch.stack(rgb_frames)  
+    mask_tensor = torch.stack(mask_frames)  
 
     return rgb_tensor, mask_tensor, valid_count
 
@@ -229,18 +183,7 @@ def create_temporal_windows(rgb_frames: torch.Tensor,
                            window_size: int = 60,
                            stride: int = 15,
                            max_missing_ratio: float = 0.1) -> List[torch.Tensor]:
-    """Create sliding temporal windows from frame sequences.
-
-    Args:
-        rgb_frames: RGB frames tensor (N, 3, H, W)
-        mask_frames: Mask frames tensor (N, 1, H, W)
-        window_size: Number of frames per window
-        stride: Stride between windows
-        max_missing_ratio: Maximum ratio of frames without hands
-
-    Returns:
-        List of window tensors (window_size, 4, H, W)
-    """
+    """Create sliding temporal windows from frame sequences"""
     if len(rgb_frames) < window_size:
         return []
 
@@ -251,10 +194,10 @@ def create_temporal_windows(rgb_frames: torch.Tensor,
         end = start + window_size
 
         # Extract window frames
-        rgb_window = rgb_frames[start:end]    # (60, 3, 224, 224)
-        mask_window = mask_frames[start:end]  # (60, 1, 224, 224)
+        rgb_window = rgb_frames[start:end]    
+        mask_window = mask_frames[start:end]  
 
-        # Count frames with hand detection (mask sum > 0)
+        # Count frames with hand detection 
         hand_frames = (mask_window.sum(dim=[1, 2, 3]) > 0).sum().item()
         missing_ratio = 1.0 - (hand_frames / window_size)
 
@@ -262,7 +205,7 @@ def create_temporal_windows(rgb_frames: torch.Tensor,
         if missing_ratio > max_missing_ratio:
             continue
 
-        # Concatenate RGB and mask channels: (60, 4, 224, 224)
+        # Concatenate RGB and mask channels
         window = torch.cat([rgb_window, mask_window], dim=1)
         windows.append(window)
 
@@ -272,16 +215,7 @@ def create_temporal_windows(rgb_frames: torch.Tensor,
 def process_single_video(video_path: Path,
                         gesture_id: int,
                         logger: logging.Logger) -> Tuple[List[torch.Tensor], int]:
-    """Process a single video into temporal windows.
-
-    Args:
-        video_path: Path to video file
-        gesture_id: Gesture class ID
-        logger: Logger instance
-
-    Returns:
-        Tuple of (windows_list, valid_frames_count)
-    """
+    """Process a single video into temporal windows"""
     try:
         # Extract frames
         frames = extract_frames(video_path)
@@ -296,7 +230,7 @@ def process_single_video(video_path: Path,
             logger.warning(f"SKIPPED {video_path.name}: Only {valid_frames} valid frames (need {SEQUENCE_LENGTH})")
             return [], valid_frames
 
-        # Create temporal windows (use SEQUENCE_LENGTH as window size)
+        # Create temporal windows
         windows = create_temporal_windows(rgb_tensor, mask_tensor, window_size=SEQUENCE_LENGTH, max_missing_ratio=1.0)
 
         if not windows:
@@ -314,11 +248,7 @@ def process_single_video(video_path: Path,
 
 
 def collect_video_files() -> Dict[str, Dict[int, List[Path]]]:
-    """Collect all video files organized by split and gesture.
-
-    Returns:
-        Dict with structure: {split: {gesture_id: [video_paths]}}
-    """
+    """Collect all video files organized by split and gesture"""
     video_files = {'Train': {}, 'Test': {}}
 
     # Process train and test directories
@@ -338,7 +268,7 @@ def collect_video_files() -> Dict[str, Dict[int, List[Path]]]:
                 video_files[split][gesture_id] = []
                 continue
 
-            # Find all MP4/mp4 files (case insensitive)
+            # Find all MP4/mp4 files 
             mp4_files = list(gesture_dir.glob("*.MP4")) + list(gesture_dir.glob("*.mp4"))
             video_files[split][gesture_id] = mp4_files
 
@@ -348,16 +278,7 @@ def collect_video_files() -> Dict[str, Dict[int, List[Path]]]:
 def create_data_split(video_files: Dict[str, List[Path]],
                      train_ratio: float = 0.8,
                      seed: int = 42) -> Dict[str, List[str]]:
-    """Create train/val/test splits from video files.
-
-    Args:
-        video_files: Dict of {gesture_id: [video_paths]}
-        train_ratio: Ratio of videos to use for training
-        seed: Random seed
-
-    Returns:
-        Dict with video IDs for each split
-    """
+    """Create train/val/test splits from video files"""
     random.seed(seed)
     splits = {'train': [], 'val': [], 'test': []}
 
@@ -381,7 +302,7 @@ def create_data_split(video_files: Dict[str, List[Path]],
         for video_path in val_videos:
             splits['val'].append(video_path.stem)
 
-    # Test videos remain as-is
+    # Test videos remain 
     test_videos = []
     for gesture_videos in video_files.values():
         for video_path in gesture_videos:
@@ -392,22 +313,13 @@ def create_data_split(video_files: Dict[str, List[Path]],
 
 
 def save_splits_metadata(splits: Dict[str, List[str]], output_path: Path):
-    """Save data splits to JSON file.
-
-    Args:
-        splits: Dict with video IDs for each split
-        output_path: Path to save JSON file
-    """
+    """Save data splits to JSON file"""
     with open(output_path, 'w') as f:
         json.dump(splits, f, indent=2)
 
 
 def preprocess_quest3_dataset() -> Dict[str, any]:
-    """Main preprocessing function for Quest 3 dataset.
-
-    Returns:
-        Dict with preprocessing statistics
-    """
+    """Main preprocessing function for Quest 3 dataset"""
     logger = setup_logging()
     logger.info("Starting Quest 3 dataset preprocessing")
 
@@ -441,7 +353,7 @@ def preprocess_quest3_dataset() -> Dict[str, any]:
         # Process videos with streaming chunked saving to avoid memory issues
         logger.info("Processing videos into temporal windows (streaming mode)...")
 
-        # Debug: Log video structure
+        # Debugging Log video structure
         logger.info("Video collection debug:")
         for split, gesture_dict in all_videos.items():
             gesture_count = {}
@@ -456,8 +368,8 @@ def preprocess_quest3_dataset() -> Dict[str, any]:
             for video_id in video_ids:
                 video_to_split[video_id] = split
 
-        # Streaming processing: process videos in batches and save immediately
-        chunk_size = 50  # Process in small batches
+        # Streaming processing
+        chunk_size = 50  
 
         # Process each split separately with streaming
         for split in ['train', 'val', 'test']:
@@ -475,7 +387,7 @@ def preprocess_quest3_dataset() -> Dict[str, any]:
                         actual_split = video_to_split.get(video_id, split_name.lower())
 
                         if actual_split != split:
-                            continue  # Skip videos for other splits
+                            continue  
 
                         # Process video immediately
                         windows, valid_frames = process_single_video(video_path, gesture_id, logger)
@@ -511,13 +423,13 @@ def preprocess_quest3_dataset() -> Dict[str, any]:
         logger.error(f"Error type: {type(e).__name__}")
         import traceback
         logger.error(f"Full traceback:\\n{traceback.format_exc()}")
-        raise  # Re-raise for caller to handle
+        raise  
 
     finally:
         logger.info("Preprocessing completed.")
 
 def _save_chunk(buffer_data, split, chunk_idx):
-    """Save a chunk of windows and labels to disk."""
+    """Save a chunk of windows and labels to disk"""
     windows_tensor = torch.stack(buffer_data['windows'])
     labels_tensor = torch.tensor(buffer_data['labels'], dtype=torch.long)
 
@@ -536,7 +448,7 @@ def _save_chunk(buffer_data, split, chunk_idx):
             with open(metadata_path, 'r') as f:
                 existing_metadata = json.load(f)
         except:
-            pass  # Use defaults if file corrupted
+            pass  
 
     existing_metadata['num_chunks'] = max(existing_metadata['num_chunks'], chunk_idx + 1)
     existing_metadata['total_windows'] += len(buffer_data['windows'])
@@ -544,10 +456,10 @@ def _save_chunk(buffer_data, split, chunk_idx):
     with open(metadata_path, 'w') as f:
         json.dump(existing_metadata, f)
 
-    chunk_size_mb = (windows_tensor.numel() * 4) // (1024**2)  # Rough estimate in MB
+    chunk_size_mb = (windows_tensor.numel() * 4) // (1024**2)  
     print(f"💾 Saved {split} chunk {chunk_idx}: {len(windows_tensor)} windows (~{chunk_size_mb}MB)")
 
 
 if __name__ == "__main__":
-    # Run preprocessing when script is executed directly
+    # Run preprocessing
     preprocess_quest3_dataset()

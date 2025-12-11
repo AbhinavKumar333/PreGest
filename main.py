@@ -1,7 +1,4 @@
-"""
-PreGest: Quest 3 Gesture Recognition System
-Main CLI entry point for preprocessing, training, and evaluation.
-"""
+"""PreGest: Quest 3 Gesture Recognition System"""
 
 import argparse
 import sys
@@ -20,10 +17,14 @@ from src.quest3_dataset import get_quest3_dataloaders
 from src.model import create_model
 from src.utils import setup_logging, count_parameters
 import torch
+from src.evaluate import run_complete_evaluation
+import subprocess
+import os
+from src.config import RESULTS_DIR, BEST_MODEL_PATH
 
 
 def setup_argparse() -> argparse.ArgumentParser:
-    """Set up command line argument parser."""
+    """Set up command line argument parser"""
     parser = argparse.ArgumentParser(
         description="PreGest: Quest 3 Gesture Recognition System",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -66,9 +67,7 @@ Examples:
 
     subparsers = parser.add_subparsers(dest='command', help='Available commands')
 
-    # ========================================================================
     # PREPROCESS COMMAND
-    # ========================================================================
     preprocess_parser = subparsers.add_parser(
         'preprocess',
         help='Extract gesture windows from dataset'
@@ -84,13 +83,8 @@ Examples:
         help='Filter to Quest 3 compatible gestures only (Stop, Grab, Swipe Right/Left)'
     )
 
-    # ========================================================================
-    # (Split command removed - Quest 3 uses internal train/val split)
-    # ========================================================================
 
-    # ========================================================================
     # TRAIN COMMAND
-    # ========================================================================
     train_parser = subparsers.add_parser('train', help='Train gesture spotting model')
     train_parser.add_argument(
         '--epochs',
@@ -117,9 +111,7 @@ Examples:
         help='Dataset to use (default: quest3)'
     )
 
-    # ========================================================================
     # EVALUATE COMMAND
-    # ========================================================================
     evaluate_parser = subparsers.add_parser('evaluate', help='Evaluate trained model')
     evaluate_parser.add_argument(
         '--model-path',
@@ -127,9 +119,7 @@ Examples:
         help='Path to model checkpoint (default: best model)'
     )
 
-    # ========================================================================
     # PHASES COMMAND
-    # ========================================================================
     phases_parser = subparsers.add_parser('phases', help='Run all 3 phases sequentially')
     phases_parser.add_argument(
         '--skip-phase2',
@@ -142,19 +132,15 @@ Examples:
         help='Skip Phase 3 production optimization'
     )
 
-    # ========================================================================
     # INFO COMMAND
-    # ========================================================================
     info_parser = subparsers.add_parser('info', help='Show system and model information')
 
     return parser
 
 
 def command_preprocess(args: argparse.Namespace) -> None:
-    """Handle preprocess command."""
-    print("="*70)
+    """Handle preprocess command"""
     print("QUEST 3 GESTURE DATASET PREPROCESSING")
-    print("="*70)
 
     try:
         stats = preprocess_quest3_dataset()
@@ -168,7 +154,7 @@ def command_preprocess(args: argparse.Namespace) -> None:
 
 
 def command_train(args: argparse.Namespace) -> None:
-    """Handle train command."""
+    """Handle train command"""
     # Store the original ACTIVE_DATASET
     from src.config import ACTIVE_DATASET as original_dataset
 
@@ -190,7 +176,7 @@ def command_train(args: argparse.Namespace) -> None:
 
 
 def command_evaluate(args: argparse.Namespace) -> None:
-    """Handle evaluate command."""
+    """Handle evaluate command"""
     from src.config import BEST_MODEL_PATH, ACTIVE_DATASET as original_dataset
 
     model_path = Path(args.model_path) if args.model_path else BEST_MODEL_PATH
@@ -200,14 +186,12 @@ def command_evaluate(args: argparse.Namespace) -> None:
         sys.exit(1)
 
     # Use Quest 3 dataset for evaluation since we trained with Quest 3
-    # Temporarily override ACTIVE_DATASET for evaluation
     print(f"ℹ️  Using Quest 3 dataset for evaluation")
     from src import config
     config.ACTIVE_DATASET = "quest3"
 
     try:
         # Run evaluation using the general evaluation function
-        from src.evaluate import run_complete_evaluation
         results = run_complete_evaluation(dataset="quest3", model_path=model_path)
 
         if results:
@@ -237,13 +221,11 @@ def command_evaluate(args: argparse.Namespace) -> None:
 
 
 def command_info(args: argparse.Namespace) -> None:
-    """Handle info command."""
-    print("\n" + "="*70)
+    """Handle info command"""
     print("PREGEST - QUEST 3 GESTURE RECOGNITION")
-    print("="*70)
 
     # Model info
-    model = create_model(num_classes=8)  # Quest 3 has 8 classes
+    model = create_model(num_classes=8)  
     total_params = count_parameters(model)
 
     print("\n📊 Model Information:")
@@ -294,11 +276,9 @@ def command_info(args: argparse.Namespace) -> None:
     print("   Results: results/")
     print("   Logs: logs/")
 
-    print("\n" + "="*70 + "\n")
-
 
 def execute_workflow(args: argparse.Namespace) -> None:
-    """Execute workflow based on global arguments."""
+    """Execute workflow based on global arguments"""
     dataset = args.dataset
 
     print(f"🚀 Starting PreGest workflow")
@@ -310,9 +290,7 @@ def execute_workflow(args: argparse.Namespace) -> None:
 
     # Preprocessing
     if args.preprocess:
-        print("="*70)
         print(f"PREPROCESSING {dataset.upper()} DATASET")
-        print("="*70)
 
         if dataset == "quest3":
             try:
@@ -329,9 +307,7 @@ def execute_workflow(args: argparse.Namespace) -> None:
 
     # Training
     if args.mode in ['train', 'both']:
-        print("\n" + "="*70)
         print(f"TRAINING {dataset.upper()} MODEL")
-        print("="*70)
 
         # Set default parameters based on dataset
         epochs = getattr(args, 'epochs', 20 if dataset == 'quest3' else 30)
@@ -352,9 +328,7 @@ def execute_workflow(args: argparse.Namespace) -> None:
 
     # Evaluation
     if args.mode in ['eval', 'both']:
-        print("\n" + "="*70)
         print(f"EVALUATING {dataset.upper()} MODEL")
-        print("="*70)
 
         try:
             results = run_complete_evaluation(dataset=dataset)
@@ -374,20 +348,14 @@ def execute_workflow(args: argparse.Namespace) -> None:
 
 
 def command_phases(args: argparse.Namespace) -> None:
-    """Handle phases command - run all 3 phases sequentially."""
+    """Handle phases command - run all 3 phases sequentially"""
     print("🚀 PREGEST COMPLETE WORKFLOW: ALL 3 PHASES")
-    print("="*70)
     print("Phase 1: Data preprocessing and initial training")
     print("Phase 2: Model improvement based on error analysis")
-    print("Phase 3: Production optimization for deployment")
-    print("="*70)
-
-    import subprocess
-    import os
+    print("Phase 3: Production optimization for deployment")    
 
     # Phase 1: Preprocessing + Initial Training
     print("\n🎯 PHASE 1: DATA PREPROCESSING + INITIAL TRAINING")
-    print("-" * 50)
 
     try:
         # Run preprocessing and training
@@ -409,10 +377,9 @@ def command_phases(args: argparse.Namespace) -> None:
         print(f"❌ Phase 1 failed: {e}")
         sys.exit(1)
 
-    # Phase 2: Model Improvement (optional)
+    # Phase 2: Model Improvement
     if not args.skip_phase2:
         print("\n🎯 PHASE 2: MODEL IMPROVEMENT")
-        print("-" * 50)
 
         try:
             print("Running: python scripts/improve_model.py")
@@ -432,10 +399,9 @@ def command_phases(args: argparse.Namespace) -> None:
     else:
         print("\n⏭️  PHASE 2: SKIPPED (using --skip-phase2)")
 
-    # Phase 3: Production Optimization (optional)
+    # Phase 3: Production Optimization
     if not args.skip_phase3:
         print("\n🎯 PHASE 3: PRODUCTION OPTIMIZATION")
-        print("-" * 50)
 
         try:
             print("Running: python scripts/phase3_optimization.py")
@@ -457,12 +423,9 @@ def command_phases(args: argparse.Namespace) -> None:
 
     # Final evaluation
     print("\n🎯 FINAL EVALUATION")
-    print("-" * 50)
 
     try:
-        # Determine which model to evaluate (Phase 2 best if available, otherwise Phase 1)
-        from src.config import RESULTS_DIR, BEST_MODEL_PATH
-
+        # Determine which model to evaluate  
         phase2_model = RESULTS_DIR / 'quest3_phase2_best.pth'
         if phase2_model.exists() and not args.skip_phase2:
             model_path = str(phase2_model)
@@ -483,7 +446,6 @@ def command_phases(args: argparse.Namespace) -> None:
         print(f"⚠️  Final evaluation failed: {e}")
 
     print("\n🎉 ALL PHASES COMPLETED!")
-    print("="*70)
     print("📊 Summary:")
     print("   Phase 1: ✅ Data preprocessing and initial training")
     if not args.skip_phase2:
@@ -500,11 +462,11 @@ def command_phases(args: argparse.Namespace) -> None:
 
 
 def main() -> None:
-    """Main entry point."""
+    """Main entry point"""
     parser = setup_argparse()
     args = parser.parse_args()
 
-    # Check if using new workflow mode (global arguments provided)
+    # Check if using new workflow mode
     if hasattr(args, 'dataset') and (args.preprocess or args.mode != 'both'):
         # New workflow mode
         execute_workflow(args)

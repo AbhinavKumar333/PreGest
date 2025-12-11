@@ -1,4 +1,4 @@
-"""Configuration management for PreGest project."""
+"""Configuration management for PreGest project"""
 
 import torch
 from pathlib import Path
@@ -31,74 +31,74 @@ QUEST3_GESTURES = {
 NUM_QUEST3_CLASSES = len(QUEST3_GESTURES)
 
 # Dataset selection
-ACTIVE_DATASET = "quest3"  # Quest 3 only
+ACTIVE_DATASET = "quest3"  
 
 # Data configuration
 DATA_CONFIG = {
-    'seq_length': 30,  # 30-frame temporal windows for Quest 3 (matches SEQUENCE_LENGTH)
-    'image_size': (224, 224),  # Resized for ResNet18 input
-    'train_ratio': 0.8,  # 80% training for Quest 3
-    'val_ratio': 0.2,  # 20% validation for Quest 3
-    'test_ratio': 0.0,  # Test from separate directory for Quest 3
-    'lead_frames': 20,  # 20 frames before gesture onset
-    'gesture_frames': 40,  # 40 frames after gesture onset
+    'seq_length': 30,  
+    'image_size': (224, 224),  
+    'train_ratio': 0.8,  
+    'val_ratio': 0.2,  
+    'test_ratio': 0.0,  
+    'lead_frames': 20,  
+    'gesture_frames': 40,  
 }
 
 # Model configuration - Multi-modal Transformer
 MODEL_CONFIG = {
-    'backbone': 'resnet18',  # Changed from squeezenet for Quest 3
-    'rgb_pretrained': True,  # Use ImageNet pretrained for RGB encoder
-    'mask_pretrained': False,  # Train mask encoder from scratch
+    'backbone': 'resnet18',  
+    'rgb_pretrained': True,  
+    'mask_pretrained': False,  
     'feature_dim': 512,
-    'fusion_dim': 256,  # Reduced from 64 for Quest 3
-    'hidden_dim': 256,  # Reduced from 128 for Quest 3
-    'num_heads': 4,  # Increased from 2 for Quest 3
-    'num_layers': 2,  # Same as before
-    'feedforward_dim': 512,  # Increased from 128 for Quest 3
-    'dropout': 0.5,  # Increased from 0.4 for Quest 3
-    'max_seq_len': 30,  # Maximum sequence length (matches SEQUENCE_LENGTH)
+    'fusion_dim': 256,  
+    'hidden_dim': 256,  
+    'num_heads': 4,  
+    'num_layers': 2,  
+    'feedforward_dim': 512,  
+    'dropout': 0.5,  
+    'max_seq_len': 30,  
     'num_classes': NUM_QUEST3_CLASSES,
 }
 
 # Training configuration
 TRAIN_CONFIG = {
-    'batch_size': 2,  # Optimized for MPS memory (M4 GPU training)
-    'learning_rate': 1e-4,  # Learning rate for Quest 3
-    'weight_decay': 1e-4,  # L2 regularization for Quest 3
-    'num_epochs': 50,  # Maximum training epochs for Quest 3
-    'patience': 7,  # Early stopping patience for Quest 3
-    'gradient_clip_norm': 1.0,  # Gradient clipping
+    'batch_size': 2,  
+    'learning_rate': 1e-4,  
+    'weight_decay': 1e-4,  
+    'num_epochs': 50,  
+    'patience': 7,  
+    'gradient_clip_norm': 1.0,  
     'scheduler_patience': 5,
-    'warmup_epochs': 3,  # Learning rate warmup
-    'seed': 42,  # Random seed
-    'class_weights': None,  # No class weights for Quest 3 (balanced)
+    'warmup_epochs': 3,  
+    'seed': 42,  
+    'class_weights': None,  
 }
 
 # Sequence Parameters
-SEQUENCE_LENGTH = 30  # frames per window (reduced for Quest 3 short videos)
+SEQUENCE_LENGTH = 30  
 FRAME_SIZE = (224, 224)
-NUM_CHANNELS = 4  # RGB (3) + mask (1)
+NUM_CHANNELS = 4  
 
 # Augmentation configuration - Domain adaptation for office environments
 AUGMENTATION_CONFIG = {
     'enable': True,
     'color_jitter': {
-        'brightness': 0.4,  # ±40% brightness change
-        'contrast': 0.4,  # ±40% contrast change
-        'saturation': 0.4,  # ±40% saturation change
-        'hue': 0.2,  # ±20° hue shift
+        'brightness': 0.4,  
+        'contrast': 0.4,  
+        'saturation': 0.4,  
+        'hue': 0.2,  
     },
     'geometric': {
-        'rotation_range': (-8, 8),  # ±8° rotation (realistic camera tilt)
-        'scale_range': (0.97, 1.03),  # ±3% scaling (slight zoom)
-        'translate_range': (-0.02, 0.02),  # ±2% translation
+        'rotation_range': (-8, 8),  
+        'scale_range': (0.97, 1.03),  
+        'translate_range': (-0.02, 0.02),  
     },
     'noise': {
-        'gaussian_std': 0.01,  # 1% Gaussian noise
+        'gaussian_std': 0.01,  
     },
     'temporal': {
-        'dropout_prob': 0.05,  # 5% frame dropout
-        'speed_range': (0.95, 1.05),  # ±5% speed variation
+        'dropout_prob': 0.05,  
+        'speed_range': (0.95, 1.05),  
     },
 }
 
@@ -115,7 +115,6 @@ def get_optimal_device():
     """Get the best available device for training."""
     if torch.cuda.is_available():
         return torch.device('cuda')
-    # Check for MPS (Apple Silicon GPU)
     elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
         return torch.device('mps')
     else:

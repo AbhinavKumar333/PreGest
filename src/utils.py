@@ -1,4 +1,4 @@
-"""Utility functions for PreGest project."""
+"""Utility functions for PreGest project"""
 
 import logging
 import torch
@@ -8,14 +8,7 @@ from typing import Optional, Union
 from .config import LOG_DIR
 
 def setup_logging(log_file: Optional[Union[str, Path]] = None) -> logging.Logger:
-    """Set up logging configuration for Quest 3 gesture recognition.
-    
-    Args:
-        log_file: Path to log file. If None, uses default from config.
-    
-    Returns:
-        Configured logger instance.
-    """
+    """Set up logging configuration for Quest 3 gesture recognition"""
     if log_file is None:
         log_file = LOG_DIR / "training.log"
     
@@ -52,38 +45,17 @@ def setup_logging(log_file: Optional[Union[str, Path]] = None) -> logging.Logger
     return logger
 
 def count_parameters(model: torch.nn.Module) -> int:
-    """Count total trainable parameters in Quest 3 model.
-    
-    Args:
-        model: PyTorch model.
-    
-    Returns:
-        Total number of trainable parameters.
-    """
+    """Count total trainable parameters in Quest 3 model"""
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
 def ensure_directory_exists(path: Union[str, Path]) -> Path:
-    """Ensure directory path exists.
-    
-    Args:
-        path: Path to create.
-    
-    Returns:
-        Path object.
-    """
+    """Ensure directory path exists"""
     path = Path(path)
     path.mkdir(parents=True, exist_ok=True)
     return path
 
 def format_time(seconds: float) -> str:
-    """Format seconds into human-readable time string.
-    
-    Args:
-        seconds: Time in seconds.
-    
-    Returns:
-        Formatted time string (e.g., "1h 23m 45s").
-    """
+    """Format seconds into human-readable time string"""
     if seconds < 60:
         return f"{seconds:.0f}s"
     elif seconds < 3600:

@@ -1,9 +1,4 @@
-#!/usr/bin/env python3
-
-"""
-PreGest Phase 3: Deployment Configuration for Quest 3
-Production-ready settings for optimized model deployment
-"""
+"""PreGest Phase 3: Deployment Configuration for Quest 3"""
 
 from pathlib import Path
 import json
@@ -14,7 +9,7 @@ DEPLOYMENT_TARGETS = {
     'quest3_local': {
         'platform': 'quest3',
         'inference_engine': 'onnx_fp16',
-        'compute_device': 'cpu',  # Quest 3 uses CPU for ML
+        'compute_device': 'cpu',  
         'latency_target_ms': 50,
         'memory_limit_mb': 256,
         'model_format': 'onnx',
@@ -101,7 +96,7 @@ OPTIMIZATION_PROFILES = {
 }
 
 class DeploymentConfig:
-    """Configuration manager for PreGest deployment."""
+    """Configuration manager for PreGest deployment"""
 
     def __init__(self, target_platform: str = 'quest3_local'):
         self.target_platform = target_platform
@@ -110,7 +105,7 @@ class DeploymentConfig:
         self.optimization_profile = 'balanced'
 
     def get_inference_config(self) -> Dict:
-        """Get inference configuration for current deployment target."""
+        """Get inference configuration for current deployment target"""
         return {
             'engine': self.config['inference_engine'],
             'device': self.config['compute_device'],
@@ -122,7 +117,7 @@ class DeploymentConfig:
         }
 
     def get_model_config(self) -> Dict:
-        """Get model configuration for current optimization profile."""
+        """Get model configuration for current optimization profile"""
         profile = OPTIMIZATION_PROFILES[self.optimization_profile]
         return {
             'precision': profile['precision'],
@@ -132,11 +127,11 @@ class DeploymentConfig:
         }
 
     def get_hybrid_config(self) -> Dict:
-        """Get cloud-edge hybrid configuration."""
+        """Get cloud-edge hybrid configuration"""
         return self.hybrid_config
 
     def update_for_performance(self, current_latency: float, current_accuracy: float):
-        """Dynamically adjust configuration based on performance metrics."""
+        """Dynamically adjust configuration based on performance metrics"""
 
         # Auto-tune optimization profile
         if current_latency > self.config['latency_target_ms'] * 1.5:
@@ -158,7 +153,7 @@ class DeploymentConfig:
                 self.optimization_profile = 'balanced'
 
     def save_config(self, filepath: str):
-        """Save current configuration to file."""
+        """Save current configuration to file"""
         config_data = {
             'target_platform': self.target_platform,
             'deployment_config': self.config,
@@ -188,25 +183,25 @@ class DeploymentConfig:
 # Quest 3 Specific Optimizations
 QUEST3_OPTIMIZATIONS = {
     'gesture_pipeline': {
-        'frame_rate': 30,  # FPS
-        'gesture_window_ms': 1000,  # 1 second gesture recognition
+        'frame_rate': 30,  
+        'gesture_window_ms': 1000,  
         'confidence_smoothing': True,
         'temporal_filtering': 'exponential_moving_average',
         'spatial_stabilization': True,
     },
     'hand_tracking_integration': {
         'api_version': 'v1.1',
-        'joint_count': 21,  # Meta hand tracking joints
-        'coordinate_system': 'local',  # Relative to hand center
+        'joint_count': 21,  
+        'coordinate_system': 'local',  
         'occlusion_handling': 'interpolation',
-        'gesture_trigger_distance': 0.1,  # Normalized units
+        'gesture_trigger_distance': 0.1,  
     },
     'performance_monitoring': {
         'metrics_collection': True,
         'latency_tracking': True,
         'memory_monitoring': True,
         'gesture_success_rate': True,
-        'report_interval_ms': 5000,  # Every 5 seconds
+        'report_interval_ms': 5000,  
     }
 }
 
@@ -240,45 +235,12 @@ def create_production_deployment_package(model_path: str, config_path: str,
     with open(output_path / 'manifest.json', 'w') as f:
         json.dump(manifest, f, indent=2)
 
-    # Create README for deployment
-    readme_content = f"""# PreGest Quest 3 Deployment Package
 
-## Overview
-Optimized gesture recognition model for Meta Quest 3 with real-time performance.
-
-## Performance Targets
-- Latency: <{config.config['latency_target_ms']}ms per inference
-- Accuracy: >92% on test set
-- Memory: <{config.config['memory_limit_mb']}MB
-
-## Files
-- `model.onnx`: Optimized ONNX model (FP16 precision)
-- `deployment_config.json`: Runtime configuration
-- `manifest.json`: Deployment metadata
-
-## Deployment Instructions
-
-1. Install ONNX Runtime for Quest 3
-2. Load model with configuration
-3. Initialize gesture recognition pipeline
-4. Integrate with Meta Hand Tracking API
-
-## Hybrid Mode (Optional)
-For enhanced accuracy, enable cloud-edge hybrid processing:
-- Edge: Feature extraction and simple gestures
-- Cloud: Complex gestures and uncertain predictions
-
-See `deployment_config.json` for detailed settings.
-"""
-
-    with open(output_path / 'README.md', 'w') as f:
-        f.write(readme_content)
 
     print(f"✅ Production deployment package created at {output_path}")
     return str(output_path)
 
 if __name__ == "__main__":
-    # Example usage
     config = DeploymentConfig('quest3_local')
     print("🚀 Quest 3 Deployment Configuration:")
     print(json.dumps(config.get_inference_config(), indent=2))

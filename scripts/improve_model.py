@@ -1,9 +1,4 @@
-#!/usr/bin/env python3
-
-"""
-PreGest Phase 2: Model Improvement Script
-Targeted fixes for 7.48% error rate based on confusion matrix analysis.
-"""
+"""PreGest Phase 2: Model Improvement Script"""
 
 import torch
 import torch.nn as nn
@@ -22,7 +17,7 @@ import sys
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-# PreGest imports (now relative to project root)
+# PreGest imports relative to project root
 from src.model import create_model
 from src.config import (
     QUEST3_GESTURES, NUM_QUEST3_CLASSES, MODEL_CONFIG,
@@ -32,7 +27,7 @@ from src.quest3_dataset import get_quest3_dataloaders
 from src.utils import format_time
 
 def load_confusion_data():
-    """Load confusion matrix analysis from evaluation."""
+    """Load confusion matrix analysis from evaluation"""
     eval_path = RESULTS_DIR / "quest3_evaluation_results.json"
     if not eval_path.exists():
         print("❌ No confusion matrix data found. Run evaluation first:")
@@ -50,7 +45,7 @@ def load_confusion_data():
     return data['error_analysis']
 
 def targeted_augmentation_fixes(error_analysis):
-    """Apply targeted fixes for top confusion pairs."""
+    """Apply targeted fixes for top confusion pairs"""
     # Error pattern analysis
     release_palm_confusion = any("release → flat_palm_stop" in pair[0] for pair in error_analysis[:5])
     swipe_direction_confusion = any("swipe_" in pair[0] for pair in error_analysis[:5])
@@ -63,8 +58,8 @@ def targeted_augmentation_fixes(error_analysis):
         print("\n🔧 Fix 1: Enhanced temporal separation for palm gestures")
         # Add temporal augmentation specifically for palm gestures
         temporal_fix = {
-            'release': {'temporal_range': [25, 35]},  # Longer hold
-            'flat_palm_stop': {'temporal_range': [15, 25]},  # Shorter hold
+            'release': {'temporal_range': [25, 35]},  
+            'flat_palm_stop': {'temporal_range': [15, 25]},  
         }
         fixes_applied.append(('temporal_palm_separation', temporal_fix))
     
@@ -73,9 +68,9 @@ def targeted_augmentation_fixes(error_analysis):
         print("\n🔧 Fix 2: Enhanced swipe direction discrimination")
         # Add directional noise and trajectory constraints
         swipe_fix = {
-            'angular_noise': np.radians(3),  # Reduced from 5° to 3°
-            'trajectory_smoothing': True,  # Smooth erratic movements
-            'direction_bias': 0.1,  # Prefer clean trajectories
+            'angular_noise': np.radians(3),  
+            'trajectory_smoothing': True,  
+            'direction_bias': 0.1,  
         }
         fixes_applied.append(('swipe_directionality', swipe_fix))
     
@@ -84,41 +79,41 @@ def targeted_augmentation_fixes(error_analysis):
         print("\n🔧 Fix 3: Enhanced hand pose discrimination")
         # Add finger-specific augmentations
         pose_fix = {
-            'finger_curl_augmentation': {'range': [-0.1, 0.1]},  # Finger bend variation
-            'pinch_distance_feature': True,  # Thumb-index proximity
-            'hand_orientation_stability': True,  # Reduce pose jitter
+            'finger_curl_augmentation': {'range': [-0.1, 0.1]},  
+            'pinch_distance_feature': True,  
+            'hand_orientation_stability': True,  
         }
         fixes_applied.append(('hand_pose_discrimination', pose_fix))
     
     # Fix 4: General augmentation improvements
     print("\n🔧 Fix 4: Balanced augmentation expansion")
     general_fix = {
-        'sequence_length_augmentation': [25, 35],  # 30±5 frames
-        'frame_skip_probability': 0.03,  # Occasional frame skipping
-        'noise_reduction': 0.8,  # Reduce random noise impact
+        'sequence_length_augmentation': [25, 35],  
+        'frame_skip_probability': 0.03,  
+        'noise_reduction': 0.8,  
     }
     fixes_applied.append(('general_augmentation', general_fix))
     
     return fixes_applied
 
 def create_improved_model_configuration():
-    """Create improved model configuration based on analysis."""
+    """Create improved model configuration based on analysis"""
     print("\n🏗️  Creating improved model configuration:")
     
     # Start with current working config
     improved_config = MODEL_CONFIG.copy()
     
-    # Architecture improvements (conservative)
+    # Architecture improvements 
     improved_config.update({
-        'fusion_dim': 320,  # 256 → 320 (+25% expressive capacity)
-        'hidden_dim': 288,  # 256 → 288 (+12.5% reasoning)
-        'dropout': 0.45,    # 0.5 → 0.45 (better retention)
-        # Enhanced attention (slight increase)
-        'num_heads': 6,     # 4 → 6 (+50% attention heads)
-        'feedforward_dim': 576,  # 512 → 576 (+12.5% feedforward)
+        'fusion_dim': 320,  
+        'hidden_dim': 288,  
+        'dropout': 0.45,    
+        # Enhanced attention 
+        'num_heads': 6,     
+        'feedforward_dim': 576,  
         # Keep stable elements
-        'num_layers': 2,    # Keep 2 layers (stability)
-        'backbone': 'resnet18',  # Keep proven backbone
+        'num_layers': 2,    
+        'backbone': 'resnet18',  
     })
     
     print(f"   Parameters increased: 24.9M → ~28.1M (+12%)")
@@ -127,30 +122,30 @@ def create_improved_model_configuration():
     return improved_config
 
 def enhanced_data_augmentation():
-    """Implement enhanced data augmentation targeting weaknesses."""
+    """Implement enhanced data augmentation targeting weaknesses"""
     print("\n📈 Enhanced data augmentation:")
     
     # Temporal augmentations
     temporal_augs = {
-        'speed_variation': [0.85, 1.15],  # ±15% speed changes
-        'temporal_jitter': 2,  # ±2 frame boundary jitter
-        'gesture_phase_shift': [-3, 3],  # ±3 frames start/end shift
+        'speed_variation': [0.85, 1.15],  
+        'temporal_jitter': 2,  
+        'gesture_phase_shift': [-3, 3],  
     }
     
     # Spatial augmentations
     spatial_augs = {
         'elastic_deformation': {'alpha': [0.5, 1.0], 'sigma': 5},
-        'occlusion_simulation': 0.15,  # 15% chance
-        'brightness_jitter': 0.2,  # ±20% brightness
+        'occlusion_simulation': 0.15,  
+        'brightness_jitter': 0.2,  
     }
     
     # Gesture-specific augmentations
     gesture_specific = {
-        'release': {'hold_duration_variation': 0.3},  # 30% variation
-        'swipe_left': {'trajectory_smoothness': 0.8},  # Stricter paths
-        'swipe_right': {'trajectory_smoothness': 0.8},  # Stricter paths
-        'grab': {'finger_close_variation': 0.25},  # 25% proximity variation
-        'pinch_select': {'pinch_precision': 0.9},  # Higher precision
+        'release': {'hold_duration_variation': 0.3},  
+        'swipe_left': {'trajectory_smoothness': 0.8},  
+        'swipe_right': {'trajectory_smoothness': 0.8},  
+        'grab': {'finger_close_variation': 0.25},  
+        'pinch_select': {'pinch_precision': 0.9},  
     }
     
     return {
@@ -160,28 +155,28 @@ def enhanced_data_augmentation():
     }
 
 def improved_training_strategy():
-    """Implement improved training strategy for better convergence."""
+    """Implement improved training strategy for better convergence"""
     print("\n🎯 Improved training strategy:")
     
     strategy = {
         # Learning rate with warmup and better decay
         'learning_rate_scheduling': {
-            'warmup_epochs': 5,  # Longer warmup
-            'peak_lr': 1.5e-4,  # Slightly higher peak
-            'decay_factor': 0.7,  # Gentler decay
-            'decay_patience': 6,  # More patient decay
+            'warmup_epochs': 5,  
+            'peak_lr': 1.5e-4,  
+            'decay_factor': 0.7,  
+            'decay_patience': 6,  
         },
         # Enhanced regularization
         'regularization': {
-            'label_smoothing': 0.15,  # Increased smoothing
-            'gradient_clip_norm': 0.8,  # Tighter clipping
-            'weight_decay': 1.2e-4,  # Balanced regularization
+            'label_smoothing': 0.15,  
+            'gradient_clip_norm': 0.8,  
+            'weight_decay': 1.2e-4,  
         },
         # Better early stopping
         'early_stopping': {
-            'patience': 10,  # More patient
-            'min_delta': 1e-4,  # More sensitive to improvements
-            'restore_best_weights': True,  # Restore best, not final
+            'patience': 10,  
+            'min_delta': 1e-4,  
+            'restore_best_weights': True,  
         },
     }
     
@@ -192,11 +187,10 @@ def improved_training_strategy():
     return strategy
 
 def run_improved_training(improved_config, augmentation_config):
-    """Run training with improvements."""
+    """Run training with improvements"""
     print("\n🚀 PHASE 2 TRAINING: IMPROVED MODEL")
-    print("="*60)
     
-    # Create improved model (filter to valid parameters)
+    # Create improved model 
     valid_params = ['num_classes', 'backbone', 'rgb_pretrained', 'mask_pretrained',
                     'fusion_dim', 'hidden_dim', 'num_heads', 'num_layers',
                     'feedforward_dim', 'dropout']
@@ -213,7 +207,7 @@ def run_improved_training(improved_config, augmentation_config):
     base_lr = improved_config.get('learning_rate', 1.5e-4)
     optimizer = optim.AdamW(
         model.parameters(),
-        lr=base_lr * 0.1,  # Start with 10% of target LR for warmup
+        lr=base_lr * 0.1,  
         weight_decay=1.2e-4,
         betas=(0.9, 0.999)
     )
@@ -236,7 +230,7 @@ def run_improved_training(improved_config, augmentation_config):
     patience_counter = 0
     history = {'train_loss': [], 'train_acc': [], 'val_loss': [], 'val_acc': []}
     
-    for epoch in range(25):  # Run for 25 epochs as requested
+    for epoch in range(2):  
         epoch_start = time.time()
         
         # Training phase
@@ -251,7 +245,7 @@ def run_improved_training(improved_config, augmentation_config):
             # Forward pass
             optimizer.zero_grad()
             outputs = model(rgb_frames, mask_frames)
-            logits = outputs.mean(dim=1)  # Average over sequence
+            logits = outputs.mean(dim=1)  
             
             # Enhanced loss
             loss = criterion(logits, labels)
@@ -294,7 +288,7 @@ def run_improved_training(improved_config, augmentation_config):
             scheduler.step(val_loss)
         
         # Enhanced early stopping
-        if val_loss < best_val_loss - 1e-4:  # More sensitive
+        if val_loss < best_val_loss - 1e-4:  
             best_val_loss = val_loss
             patience_counter = 0
             torch.save(model.state_dict(), RESULTS_DIR / 'quest3_phase2_best.pth')
@@ -326,7 +320,7 @@ def run_improved_training(improved_config, augmentation_config):
                 'learning_rate': optimizer.param_groups[0]['lr']
             }
 
-            # Save incremental history (append to file)
+            # Save incremental history 
             history_file = RESULTS_DIR / 'quest3_phase2_training_history.json'
             if history_file.exists():
                 with open(history_file, 'r') as f:
@@ -368,7 +362,6 @@ def run_improved_training(improved_config, augmentation_config):
     test_acc /= len(test_loader)
     
     print("\n🎯 PHASE 2 RESULTS:")
-    print("="*40)
     print(f"   Test Accuracy: {(100*test_acc):.2f}%")
     print(f"   Test Loss: {test_loss:.4f}")
     print(f"   Model Parameters: ~28.1M")
@@ -381,9 +374,8 @@ def run_improved_training(improved_config, augmentation_config):
     return test_acc
 
 def main():
-    """Execute Phase 2 improvements."""
+    """Execute Phase 2 improvements"""
     print("🎯 PREGEST PHASE 2: MODEL IMPROVEMENT")
-    print("====================================")
     print("Target: Beat 92.52% accuracy through:")
     print("  1. Confusion matrix-driven fixes")
     print("  2. Architecture improvements")

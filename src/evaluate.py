@@ -1,4 +1,4 @@
-"""Evaluation and metrics for Quest 3 gesture spotting model."""
+"""Evaluation and metrics for Quest 3 gesture spotting model"""
 
 import numpy as np
 import torch
@@ -15,15 +15,17 @@ from .model import create_model
 from .quest3_dataset import get_quest3_dataloaders
 from .utils import setup_logging, ensure_directory_exists
 import time
+from .config import MODEL_CONFIG
+from .config import TRAIN_CONFIG
 
 
 def accuracy_score_manual(y_true, y_pred):
-    """Manual accuracy calculation."""
+    """Manual accuracy calculation"""
     return np.mean(y_true == y_pred)
 
 
 def precision_recall_fscore_support_manual(y_true, y_pred, average=None):
-    """Manual precision, recall, fscore calculation."""
+    """Manual precision, recall, fscore calculation"""
     classes = np.unique(np.concatenate([y_true, y_pred]))
     n_classes = len(classes)
 
@@ -57,7 +59,7 @@ def precision_recall_fscore_support_manual(y_true, y_pred, average=None):
 
 
 def confusion_matrix_manual(y_true, y_pred):
-    """Manual confusion matrix calculation."""
+    """Manual confusion matrix calculation"""
     classes = np.unique(np.concatenate([y_true, y_pred]))
     n_classes = len(classes)
     cm = np.zeros((n_classes, n_classes), dtype=int)
@@ -71,15 +73,7 @@ def confusion_matrix_manual(y_true, y_pred):
 
 
 def analyze_confusion_matrix(cm: np.ndarray, class_names: List[str]) -> List[Tuple[str, int]]:
-    """Analyze confusion matrix to find most confused pairs.
-
-    Args:
-        cm: Confusion matrix
-        class_names: List of class names
-
-    Returns:
-        List of (pair_description, count) tuples, sorted by count descending
-    """
+    """Analyze confusion matrix to find most confused pairs"""
     confused_pairs = []
 
     for i in range(len(class_names)):
@@ -100,17 +94,7 @@ def evaluate_model(
     device: torch.device,
     dataset: str = "auto"
 ) -> Dict[str, Any]:
-    """Evaluate gesture spotting model with frame-level metrics.
-
-    Args:
-        model: Trained gesture spotting model
-        test_loader: Test dataloader
-        device: Device to run evaluation on
-        dataset: Dataset type ("quest3" or "auto")
-
-    Returns:
-        Dictionary with evaluation metrics
-    """
+    """Evaluate gesture spotting model with frame-level metrics"""
     logger = setup_logging()
 
     # Determine dataset and classes
@@ -122,12 +106,9 @@ def evaluate_model(
         class_names = [QUEST3_GESTURES[i] for i in range(num_classes)]
         dataset_title = "Quest 3"
     else:
-        # Unsupported dataset - should not happen in cleaned version
         raise ValueError(f"Unsupported dataset: {dataset}")
 
-    logger.info("="*70)
     logger.info(f"{dataset_title.upper()} GESTURE SPOTTING EVALUATION")
-    logger.info("="*70)
 
     model.eval()
     all_predictions = []
@@ -139,22 +120,22 @@ def evaluate_model(
 
     with torch.no_grad():
         for batch_data, labels in test_loader:
-            # Quest 3: batch_data is (B, 60, 4, 224, 224) - combined RGB and mask
-            rgb = batch_data[:, :, :3].to(device)  # (B, 60, 3, 224, 224)
-            mask = batch_data[:, :, 3:].to(device)  # (B, 60, 1, 224, 224)
+            # Quest 3: batch_data
+            rgb = batch_data[:, :, :3].to(device)  
+            mask = batch_data[:, :, 3:].to(device)  
             labels = labels.to(device)
 
             # Measure inference time
             start_time = time.time()
-            logits = model(rgb, mask)  # (B, 60, C)
+            logits = model(rgb, mask)  
             inference_times.append(time.time() - start_time)
 
-            # Quest 3 averaging (same as training)
-            B = logits.shape[0]  # Get batch size
-            logits = logits.mean(dim=1)  # (B, num_classes) - average over sequence
-            logits_flat = logits  # (B, num_classes)
-            labels_flat = labels  # (B,)
-            total_frames += B  # Count sequences, not frames for Quest 3
+            # Quest 3 averaging
+            B = logits.shape[0]  
+            logits = logits.mean(dim=1)  
+            logits_flat = logits  
+            labels_flat = labels  
+            total_frames += B  
 
             predictions = torch.argmax(logits, dim=1)
             all_predictions.extend(predictions.cpu().numpy())
@@ -245,7 +226,7 @@ def evaluate_model(
 
 
 def plot_confusion_matrix(cm: np.ndarray, class_names: List[str], dataset_title: str = "Gesture") -> None:
-    """Plot confusion matrix heatmap."""
+    """Plot confusion matrix heatmap"""
     logger = setup_logging()
     ensure_directory_exists(RESULTS_DIR)
 
@@ -265,7 +246,7 @@ def plot_confusion_matrix(cm: np.ndarray, class_names: List[str], dataset_title:
 
 
 def plot_per_class_f1(per_class_metrics: Dict[str, Dict], class_names: List[str], dataset_title: str = "Gesture") -> None:
-    """Plot per-class F1 scores."""
+    """Plot per-class F1 scores"""
     logger = setup_logging()
     ensure_directory_exists(RESULTS_DIR)
 
@@ -286,7 +267,7 @@ def plot_per_class_f1(per_class_metrics: Dict[str, Dict], class_names: List[str]
 
 
 def save_evaluation_results(results: Dict[str, Any], dataset: str = "gesture") -> None:
-    """Save evaluation results to JSON file."""
+    """Save evaluation results to JSON file"""
     logger = setup_logging()
     ensure_directory_exists(RESULTS_DIR)
 
@@ -299,15 +280,7 @@ def save_evaluation_results(results: Dict[str, Any], dataset: str = "gesture") -
 
 
 def run_complete_evaluation(model_path: Optional[Path] = None, dataset: str = "auto") -> Optional[Dict[str, Any]]:
-    """Run complete evaluation pipeline on test set.
-
-    Args:
-        model_path: Path to model checkpoint. If None, uses BEST_MODEL_PATH.
-        dataset: Dataset type ("quest3" or "auto")
-
-    Returns:
-        Evaluation results dictionary or None if failed.
-    """
+    """Run complete evaluation pipeline on test set"""
     logger = setup_logging()
 
     try:
@@ -326,8 +299,7 @@ def run_complete_evaluation(model_path: Optional[Path] = None, dataset: str = "a
         logger.info(f"Loading model from {model_path}")
 
         # Determine number of classes for model creation
-        from .config import MODEL_CONFIG
-        num_classes = NUM_QUEST3_CLASSES  # Only Quest 3 supported
+        num_classes = NUM_QUEST3_CLASSES  
         model = create_model(
             num_classes=num_classes,
             backbone=MODEL_CONFIG.get('backbone', 'resnet18'),
@@ -343,12 +315,10 @@ def run_complete_evaluation(model_path: Optional[Path] = None, dataset: str = "a
         model.load_state_dict(torch.load(model_path, map_location='cpu'))
         model.eval()
 
-        # Load test data - use consistent batch size
-        from .config import TRAIN_CONFIG
+        # Load test data
         if dataset == "quest3":
             _, _, test_loader = get_quest3_dataloaders(batch_size=TRAIN_CONFIG['batch_size'])
         else:
-            # EgoCentric preprocessing not supported in cleaned version
             logger.error("EgoCentric evaluation not supported in cleaned version")
             return None
 
@@ -370,11 +340,7 @@ def run_complete_evaluation(model_path: Optional[Path] = None, dataset: str = "a
 
 
 def plot_training_history(training_history: Dict[str, List[float]]) -> None:
-    """Plot training history (loss and accuracy curves).
-
-    Args:
-        training_history: Dictionary with training metrics
-    """
+    """Plot training history (loss and accuracy curves)"""
     logger = setup_logging()
     ensure_directory_exists(RESULTS_DIR)
 

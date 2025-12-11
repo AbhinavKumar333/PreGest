@@ -1,9 +1,4 @@
-#!/usr/bin/env python3
-
-"""
-PreGest Phase 3: Production Optimization for Quest 3 Deployment
-Real-time performance optimization targeting <50ms inference
-"""
+"""PreGest Phase 3: Production Optimization for Quest 3 Deployment"""
 
 import torch
 import torch.nn as nn
@@ -35,8 +30,25 @@ from src.config import (
 from src.quest3_dataset import get_quest3_dataloaders
 from src.utils import format_time
 
+# New update
+# ---- JSON SAFE CONVERSION ----
+def to_json_safe(obj):
+    """Recursively convert numpy types to Python native types for JSON serialization."""
+    if isinstance(obj, dict):
+        return {k: to_json_safe(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [to_json_safe(v) for v in obj]
+    if isinstance(obj, (np.bool_, np.bool8)):
+        return bool(obj)
+    if isinstance(obj, (np.int32, np.int64, np.longlong)):
+        return int(obj)
+    if isinstance(obj, (np.float16, np.float32, np.float64)):
+        return float(obj)
+    return obj
+
+
 class Phase3Optimizer:
-    """Phase 3 optimization engine for Quest 3 deployment."""
+    """Phase 3 optimization engine for Quest 3 deployment"""
 
     def __init__(self, model_path: str = None):
         self.model_path = model_path or RESULTS_DIR / 'quest3_phase2_best.pth'
@@ -45,8 +57,8 @@ class Phase3Optimizer:
         self.results_dir.mkdir(exist_ok=True)
 
         # Performance targets
-        self.target_latency = 50  # ms
-        self.target_accuracy_drop = 0.05  # 5% max accuracy loss
+        self.target_latency = 50  
+        self.target_accuracy_drop = 0.05  
 
         # Initialize results tracking
         self.optimization_results = {
@@ -59,7 +71,7 @@ class Phase3Optimizer:
         }
 
     def load_baseline_model(self) -> torch.nn.Module:
-        """Load the Phase 2 optimized model as baseline."""
+        """Load the Phase 2 optimized model as baseline"""
         print("🔄 Loading Phase 2 optimized model...")
 
         # Load Phase 2 configuration
@@ -91,10 +103,10 @@ class Phase3Optimizer:
 
     def benchmark_model(self, model: torch.nn.Module, name: str,
                        num_runs: int = 100) -> Dict[str, float]:
-        """Benchmark model performance (latency, memory, accuracy)."""
+        """Benchmark model performance (latency, memory, accuracy)"""
         print(f"📊 Benchmarking {name}...")
 
-        # Check if model is quantized - quantized models must stay on CPU
+        # Check if model is quantized
         is_quantized = hasattr(model, '_modules') and any(
             isinstance(module, torch.nn.quantized.Linear) or isinstance(module, torch.nn.quantized.Conv2d)
             for module in model.modules()
@@ -130,7 +142,7 @@ class Phase3Optimizer:
                 _ = model(dummy_rgb, dummy_mask)
                 torch.cuda.synchronize() if torch.cuda.is_available() else None
                 end_time = time.time()
-                latencies.append((end_time - start_time) * 1000)  # Convert to ms
+                latencies.append((end_time - start_time) * 1000)  
 
         # Benchmark accuracy
         model.eval()
@@ -155,7 +167,7 @@ class Phase3Optimizer:
         # Memory usage
         memory_usage = psutil.virtual_memory().percent
         if torch.cuda.is_available():
-            gpu_memory = torch.cuda.memory_allocated() / 1024**2  # MB
+            gpu_memory = torch.cuda.memory_allocated() / 1024**2  
         else:
             gpu_memory = 0
 
@@ -176,7 +188,7 @@ class Phase3Optimizer:
         return results
 
     def get_model_size(self, model: torch.nn.Module) -> float:
-        """Get model size in MB."""
+        """Get model size in MB"""
         param_size = 0
         for param in model.parameters():
             param_size += param.nelement() * param.element_size()
@@ -186,7 +198,7 @@ class Phase3Optimizer:
         return (param_size + buffer_size) / 1024**2
 
     def apply_quantization(self, model: torch.nn.Module) -> torch.nn.Module:
-        """Apply dynamic quantization to the model."""
+        """Apply dynamic quantization to the model"""
         print("🔧 Applying dynamic quantization...")
 
         # Prepare model for quantization
@@ -200,7 +212,7 @@ class Phase3Optimizer:
 
         try:
             # Configure quantization backend
-            torch.backends.quantized.engine = 'qnnpack'  # Use QNNPACK for CPU
+            torch.backends.quantized.engine = 'qnnpack'  
 
             quantized_model = torch.quantization.quantize_dynamic(
                 model, {torch.nn.Linear, torch.nn.Conv2d}, dtype=torch.qint8
@@ -215,14 +227,14 @@ class Phase3Optimizer:
         except Exception as e:
             print(f"   ⚠️  Quantization failed ({type(e).__name__}): {str(e)[:100]}...")
             print("   💡 Skipping quantization - proceeding with other optimizations")
-            return model.to(original_device)  # Return original model
+            return model.to(original_device)  
 
     def apply_pruning(self, model: torch.nn.Module, pruning_ratio: float = 0.3) -> torch.nn.Module:
-        """Apply magnitude-based pruning to reduce model size."""
+        """Apply magnitude-based pruning to reduce model size"""
         print(f"🔧 Applying {pruning_ratio*100:.0f}% magnitude pruning...")
 
         try:
-            # Use torch.nn.utils.prune if available (PyTorch 1.4+)
+            # Use torch.nn.utils.prune if available 
             for name, module in model.named_modules():
                 if isinstance(module, (torch.nn.Conv2d, torch.nn.Linear)):
                     torch.nn.utils.prune.l1_unstructured(module, name='weight', amount=pruning_ratio)
@@ -253,12 +265,12 @@ class Phase3Optimizer:
         return model
 
     def export_to_onnx(self, model: torch.nn.Module, precision: str = 'fp32') -> str:
-        """Export model to ONNX format with specified precision."""
+        """Export model to ONNX format with specified precision"""
         print(f"🔧 Exporting model to ONNX ({precision})...")
 
         onnx_path = self.results_dir / f'quest3_model_{precision}.onnx'
 
-        # Ensure model is on CPU for ONNX export (ONNX doesn't handle device-specific ops well)
+        # Ensure model is on CPU for ONNX export
         model_device = next(model.parameters()).device
         if model_device.type != 'cpu':
             print("   ⚠️  Moving model to CPU for ONNX export")
@@ -280,7 +292,7 @@ class Phase3Optimizer:
                 'mask_frames': {0: 'batch_size', 1: 'seq_len'},
                 'logits': {0: 'batch_size', 1: 'seq_len'}
             },
-            opset_version=14,  # Updated to support aten::scaled_dot_product_attention
+            opset_version=14,  
             verbose=False
         )
 
@@ -294,7 +306,7 @@ class Phase3Optimizer:
         return str(onnx_path)
 
     def optimize_onnx_model(self, onnx_path: str) -> str:
-        """Apply ONNX Runtime optimizations."""
+        """Apply ONNX Runtime optimizations"""
         print("🔧 Optimizing ONNX model with ONNX Runtime...")
 
         # Create optimized ONNX model
@@ -312,7 +324,7 @@ class Phase3Optimizer:
 
     def benchmark_onnx_model(self, onnx_path: str, name: str,
                            num_runs: int = 100) -> Dict[str, float]:
-        """Benchmark ONNX model performance."""
+        """Benchmark ONNX model performance"""
         print(f"📊 Benchmarking ONNX model {name}...")
 
         # Create ONNX session
@@ -363,7 +375,7 @@ class Phase3Optimizer:
             'latency_std': np.std(latencies),
             'accuracy': accuracy,
             'memory_percent': psutil.virtual_memory().percent,
-            'gpu_memory_mb': 0,  # ONNX handles GPU memory differently
+            'gpu_memory_mb': 0,  
             'model_size_mb': Path(onnx_path).stat().st_size / 1024**2
         }
 
@@ -374,16 +386,15 @@ class Phase3Optimizer:
         return results
 
     def run_phase3_optimization(self):
-        """Execute complete Phase 3 optimization pipeline."""
+        """Execute complete Phase 3 optimization pipeline"""
         print("🚀 PHASE 3: PRODUCTION OPTIMIZATION FOR QUEST 3")
-        print("="*60)
 
         # Step 1: Load and benchmark baseline model
         print("\n📊 STEP 1: BASELINE BENCHMARKING")
         baseline_model = self.load_baseline_model()
         baseline_results = self.benchmark_model(baseline_model, 'original')
 
-        # Step 2: Skip quantization (MPS compatibility issues)
+        # Step 2: Skip quantization 
         print("\n🔧 STEP 2: QUANTIZATION OPTIMIZATION - SKIPPED")
         print("   ℹ️  Quantization has MPS compatibility issues on Apple Silicon")
         print("   💡 ONNX optimization provides better performance gains")
@@ -399,7 +410,7 @@ class Phase3Optimizer:
         onnx_fp32_path = self.export_to_onnx(baseline_model, 'fp32')
         onnx_fp32_results = self.benchmark_onnx_model(onnx_fp32_path, 'onnx_fp32')
 
-        # Step 5: Export ONNX FP16 (no optimization needed for FP16)
+        # Step 5: Export ONNX FP16 
         print("\n🔧 STEP 5: ONNX EXPORT (FP16)")
         try:
             onnx_fp16_path = self.export_to_onnx(baseline_model, 'fp16')
@@ -408,7 +419,7 @@ class Phase3Optimizer:
             print(f"   ⚠️  FP16 ONNX export/optimization failed: {str(e)[:100]}...")
             print("   💡 Skipping FP16 optimization - using FP32 ONNX results instead")
             onnx_fp16_results = onnx_fp32_results.copy()
-            onnx_fp16_results['latency_ms'] = float('inf')  # Mark as invalid for comparison
+            onnx_fp16_results['latency_ms'] = float('inf')  
 
         # Step 6: Generate optimization report
         print("\n📊 STEP 6: OPTIMIZATION REPORT")
@@ -418,7 +429,7 @@ class Phase3Optimizer:
         print(f"   Results saved to {self.results_dir}")
 
     def generate_optimization_report(self):
-        """Generate comprehensive optimization report."""
+        """Generate comprehensive optimization report"""
         report_path = self.results_dir / 'phase3_optimization_report.json'
 
         # Calculate improvements
@@ -451,12 +462,15 @@ class Phase3Optimizer:
             'deployment_ready': self.check_deployment_readiness()
         }
 
+        # New update
+        # Convert everything to JSON-safe types
+        safe_report = to_json_safe(report)
+
         with open(report_path, 'w') as f:
-            json.dump(report, f, indent=2)
+            json.dump(safe_report, f, indent=2)
 
         # Print summary
         print("\n🎯 OPTIMIZATION SUMMARY:")
-        print("="*40)
         print(f"   Baseline latency: {report['optimization_summary']['baseline_latency_ms']:.1f}ms")
         print(f"   Optimized latency: {report['optimization_summary']['optimized_latency_ms']:.1f}ms")
         print(f"   Speedup factor: {report['optimization_summary']['speedup_factor']:.2f}x")
@@ -468,7 +482,7 @@ class Phase3Optimizer:
         return report
 
     def get_optimization_recommendations(self) -> List[str]:
-        """Generate optimization recommendations based on results."""
+        """Generate optimization recommendations based on results"""
         recommendations = []
 
         baseline = self.optimization_results.get('original', {})
@@ -503,7 +517,7 @@ class Phase3Optimizer:
         return recommendations
 
     def check_deployment_readiness(self) -> bool:
-        """Check if optimized model is ready for deployment."""
+        """Check if optimized model is ready for deployment"""
         baseline = self.optimization_results.get('original', {})
         onnx_fp32 = self.optimization_results.get('onnx_fp32', {})
         onnx_fp16 = self.optimization_results.get('onnx_fp16', {})
@@ -517,9 +531,8 @@ class Phase3Optimizer:
         return latency_ok and accuracy_ok
 
 def main():
-    """Execute Phase 3 optimizations."""
+    """Execute Phase 3 optimizations"""
     print("🎯 PREGEST PHASE 3: QUEST 3 DEPLOYMENT OPTIMIZATION")
-    print("=================================================")
 
     optimizer = Phase3Optimizer()
     optimizer.run_phase3_optimization()
