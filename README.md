@@ -252,12 +252,12 @@ data/quest3/raw/
 ### Production Performance (Achieved)
 
 From 10-epoch training on 213 Quest 3 videos (602 test samples):
-- ** Test Accuracy**: **92.52%**  **(Industry Leading!)**
-- ** Validation Accuracy**: **96.82%**
-- ** Training Accuracy**: **94.48%**
-- ** Model Size**: **24.9M parameters**
-- ** Training Time**: **4 hours 26 minutes**
-- ** Preprocessing Time**: **~30 minutes** for full dataset
+- **Test Accuracy**: **92.52%**  **(Industry Leading!)**
+- **Validation Accuracy**: **96.82%**
+- **Training Accuracy**: **94.48%**
+- **Model Size**: **24.9M parameters**
+- **Training Time**: **4 hours 26 minutes**
+- **Preprocessing Time**: **~30 minutes** for full dataset
 
 ### Per-Class Performance (Test Set)
 ```
@@ -272,9 +272,9 @@ swipe_up:      98.0% (49/50)
 ```
 
 ### Performance Benchmark
-- ** Surpasses** research baselines for Quest 3 gestures
-- ** Ready** for production VR/AR deployment
-- ** Optimized** for real-time inference (<50ms target)
+- **Surpasses** research baselines for Quest 3 gestures
+- **Ready** for production VR/AR deployment
+- **Optimized** for real-time inference (<50ms target)
 
 ### 🚀 Latency Comparison (vs Baselines)
 
