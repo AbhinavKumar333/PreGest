@@ -39,7 +39,7 @@ def load_model():
     model_path = BEST_MODEL_PATH
     if not model_path.exists():
         # Fallback to phase2 model
-        model_path = Path("results/quest3_phase2_best.pth")
+        model_path = Path("results_new/phase3_optimization/quest3_model_fp32.onnx")
     
     if model_path.exists():
         checkpoint = torch.load(model_path, map_location=DEVICE, weights_only=False)

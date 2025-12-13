@@ -1,25 +1,57 @@
 # PreGest: Quest 3 Gesture Recognition System
 
-**92.52% Test Accuracy** • **Production Ready** • **Meta Quest 3 Deployable**
+**94.14% Test Accuracy** • **79ms Latency** • **Production Ready** • **Meta Quest 3 Optimized**
 
-A streamlined implementation of real-time gesture recognition using Transformer Neural Networks, optimized for Meta Quest 3 deployment. PreGest achieves **industry-leading accuracy** through direct training on native Quest 3 gesture videos.
+A streamlined implementation of real-time gesture recognition using Multi-Modal Transformer Neural Networks, optimized for Meta Quest 3 deployment. PreGest achieves **industry-leading accuracy** through direct training on native Quest 3 gesture videos with dual-stream RGB + Hand Mask processing.
 
-##  What's New
+## Overview
 
-- **92.52% Test Accuracy** - Highest accuracy for Quest 3 gesture recognition
-- **Production Ready** - Clean, single-purpose Quest 3 focused codebase
-- **3-Command Workflow** - Simplified training and deployment
-- **24.9M Parameter Transformer** - Optimized for real-time inference
-- **Meta Quest 3 Native** - Direct training on Quest 3 MP4 videos
+- **94.14% Test Accuracy** - State-of-the-art for Quest 3 gesture recognition
+- **79.0ms Inference Latency** - 2.4x faster than C3D baseline
+- **Multi-Modal Architecture** - Dual ResNet18 encoders (RGB + Hand Mask)
+- **Transformer Temporal Modeling** - 2-layer, 4-head attention mechanism
+- **24.9M Parameters** - Optimized for real-time VR inference
+- **Production Ready** - ONNX export, pruning, quantization support
+- **Gradio Demo App** - Interactive web interface for testing
 
-## Features
+## Dataset
 
-- **Complete Pipeline**: From raw video processing to model training and evaluation
-- **Transformer Architecture**: Multi-head self-attention for gesture sequence modeling
-- **OpenMMLab Integration**: Advanced pose estimation for hand detection
-- **Comprehensive Evaluation**: Accuracy, F1-score, confusion matrix, and per-class metrics
-- **Cross-Platform**: Works on macOS and Linux
-- **Production Ready**: Model checkpointing, logging, and visualization
+**Quest 3 Gesture Dataset** - 671 videos across 8 gesture classes
+
+**[Download Dataset](https://drive.google.com/drive/folders/1hNkglhIpr0qbQjM8UqeYdesQjXigXLAM?usp=sharing)** (Google Drive)
+
+- **Total Videos**: 671 MP4 files
+- **Gestures**: flat_palm_stop, grab, pinch_select, release, swipe_down, swipe_left, swipe_right, swipe_up
+- **Format**: MP4 (H.264), 30 FPS
+- **Duration**: 2-5 seconds per video
+- **Size**: ~2.5 GB (raw videos)
+- **Split**: Train/Val/Test (70/15/15)
+
+After downloading, extract to `data/quest3/raw/` following the structure in [Usage](#usage).
+
+**Why a Custom Dataset?** Existing gesture datasets (Jester, NVGesture, EgoGesture) use third-person viewpoints or different camera systems. No public dataset provides egocentric gesture videos recorded natively on Meta Quest 3 with its specific camera placement and hand tracking. We created this dataset to ensure model training matches the deployment environment.
+
+## Key Features
+
+### Architecture
+- **Multi-Modal Fusion**: Dual-stream processing (RGB + Hand Segmentation Masks)
+- **Spatial Encoding**: ResNet18 backbones (ImageNet pretrained for RGB)
+- **Temporal Modeling**: Transformer encoder with positional encoding
+- **Efficient Design**: 60-frame windows, 256D fusion space, 4-head attention
+
+**Why Multi-Modal?** Gesture recognition benefits from two complementary sources: RGB frames capture appearance and texture for distinguishing similar gestures, while hand masks provide explicit geometric information about hand shape/position, making the model robust to varying backgrounds, lighting, and skin tones.
+
+### Pipeline
+- **Complete Workflow**: Raw video → Preprocessing → Training → Evaluation → Deployment
+- **Hand Segmentation**: HSV-based skin color detection for robust mask generation
+- **Data Augmentation**: Sliding windows (stride 15) for temporal diversity
+- **Production Tools**: ONNX export, model pruning, FP16 quantization
+
+### Evaluation
+- **Comprehensive Metrics**: Accuracy, Precision, Recall, F1-score, Confusion Matrix
+- **Per-Class Analysis**: Detailed performance breakdown for all 8 gestures
+- **Error Analysis**: Top misclassification patterns identified
+- **Visualization**: Training curves, confusion matrices, F1-score plots
 
 ## Project Structure
 
@@ -73,15 +105,54 @@ pregest-quest3/
    pip install -r requirements.txt
    ```
 
-4. **Set up Kaggle API (optional)**:
+4. **Place the dataset in the correct location**:
    ```bash
-   # Create kaggle.json with your credentials
-   mkdir ~/.kaggle
-   echo '{"username":"your-username","key":"your-api-key"}' > ~/.kaggle/kaggle.json
-   chmod 600 ~/.kaggle/kaggle.json
+   mdkir data/
+   cp -r Quest3 data/quest3
    ```
 
-##  Usage
+## Recording Gestures on Meta Quest 3
+
+### Quick Recording Steps
+
+1. **Start Recording**:
+   - Press **Meta button** (right controller)
+   - Open **Quick Settings** and click on Hand Tracking
+   - Open Camera app using Pinch gesture
+   - Click on **Record** button using Pinch gesture
+   - Perform your gesture (2-3 seconds)
+   - Click on **Stop** button using Pinch gesture
+
+2. **Transfer Videos to Computer**:
+   ```bash
+   # Connect Quest 3 via USB-C cable
+   # Enable "File Transfer" mode when prompted
+   
+   # macOS/Linux:
+   # Data transfer using USB not supported
+   
+   # Windows: Use File Explorer
+   # This PC → Quest 3 → Internal Storage → Oculus → VideoShots
+   ```
+
+3. **Organize Dataset**:
+   ```
+   data/quest3/raw/
+   ├── train/
+   │   ├── flat_palm_stop/
+   │   ├── grab/
+   │   ├── pinch_select/
+   │   ├── release/
+   │   ├── swipe_down/
+   │   ├── swipe_left/
+   │   ├── swipe_right/
+   │   └── swipe_up/
+   └── test/  # (same structure)
+   ```
+
+**Requirements**: MP4 format, 30 FPS, 2-5 seconds per video, well-lit environment
+
+## Usage
 
 ### Step 1: Show System Info
 ```bash
@@ -245,48 +316,60 @@ data/quest3/raw/
 5. **Temporal Windows**: 60-frame sliding windows with 15-frame stride
 6. **Data Splitting**: Video-level train/val split within each gesture class
 
+## Results
 
+### Production Performance (Latest Results)
 
-##  Results
+**Dataset**: 671 Quest 3 videos → 4,326 temporal windows (60-frame sequences)
+- **Train**: 398 videos → 3,026 windows
+- **Validation**: 102 videos → 651 windows  
+- **Test**: 171 videos → 649 windows
 
-### Production Performance (Achieved)
+#### Overall Metrics
+- **Test Accuracy**: **94.14%** **(State-of-the-Art)**
+- **Weighted F1-Score**: **94.19%**
+- **Macro F1-Score**: **94.13%**
+- **Weighted Precision**: **94.53%**
+- **Weighted Recall**: **94.14%**
 
-From 10-epoch training on 213 Quest 3 videos (602 test samples):
-- **Test Accuracy**: **92.52%**  **(Industry Leading!)**
-- **Validation Accuracy**: **96.82%**
-- **Training Accuracy**: **94.48%**
-- **Model Size**: **24.9M parameters**
-- **Training Time**: **4 hours 26 minutes**
-- **Preprocessing Time**: **~30 minutes** for full dataset
+#### Per-Class Performance (Test Set)
 
-### Per-Class Performance (Test Set)
-```
-flat_palm_stop: 94.1% (31/33)
-grab:          88.6% (39/44)
-pinch_select:  90.0% (18/20)
-release:       97.8% (44/45)
-swipe_down:    95.2% (40/42)
-swipe_left:    85.7% (30/35)
-swipe_right:   87.5% (28/32)
-swipe_up:      98.0% (49/50)
-```
+| Gesture | Precision | Recall | F1-Score | Support |
+|---------|-----------|--------|----------|----------|
+| **swipe_up** | 100.0% | 98.8% | **99.4%** | 84 |
+| **swipe_down** | 97.8% | 100.0% | **98.9%** | 90 |
+| **pinch_select** | 100.0% | 100.0% | **100.0%** | 70 |
+| **grab** | 100.0% | 94.4% | **97.1%** | 90 |
+| **swipe_left** | 87.3% | 95.4% | **91.2%** | 65 |
+| **swipe_right** | 94.8% | 88.0% | **91.3%** | 83 |
+| **release** | 93.8% | 84.3% | **88.8%** | 89 |
+| **flat_palm_stop** | 80.2% | 93.6% | **86.4%** | 78 |
 
-### Performance Benchmark
-- **Surpasses** research baselines for Quest 3 gestures
-- **Ready** for production VR/AR deployment
-- **Optimized** for real-time inference (<50ms target)
+**Top Performers**: `swipe_up` (99.4%), `swipe_down` (98.9%), `pinch_select` (100%)
 
-### 🚀 Latency Comparison (vs Baselines)
+#### Training Details
+- **Model Size**: 24.9M parameters (93.04 MB)
+- **Training Time**: ~4 hours (25 epochs with early stopping)
+- **Best Epoch**: Epoch 12 (Val Acc: 97.8%)
+- **Optimizer**: AdamW (lr=1.5e-5, weight_decay=0.01)
+- **Loss Function**: Focal Loss (gamma=2.0) with class balancing
+- **Regularization**: Dropout(0.5), LayerNorm, Label Smoothing
 
-Our PreGest Phase 3 Optimized Model (ONNX) is compared against standard industry baselines for action recognition:
+### Latency Analysis
 
-| Model Architecture | Latency (Inference) | Speedup Factor | Status |
-| :--- | :--- | :--- | :--- |
-| **PreGest (ResNet18 + Transformer)** | **123.9 ms** | **1.0x** | **Ours** |
-| C3D (Standard 3D CNN Baseline) | ~300.0 ms | 2.4x Slower | Benchmark |
-| I3D (Inception 3D) | ~500.0 ms | 4.0x Slower | Benchmark |
+**Why Latency-Focused Baselines?** In real-time VR, inference latency is the most critical metric. The human perception threshold for interactive responsiveness is ~100ms—delays beyond this degrade the VR experience. Our baselines (C3D, SlowFast, TimeSformer) are chosen specifically to compare inference speed across architectures capable of high accuracy on video recognition.
 
-**Verdict**: The **PreGest** architecture is **2.4x faster** than the standard 3D CNN baseline (C3D), making it significantly more suitable for real-time VR applications where inference latency is critical.
+#### Inference Performance (CPU)
+
+| Model | Latency (ms) | Throughput (FPS) | Speedup vs PreGest |
+|-------|--------------|------------------|--------------------|
+| **PreGest (PyTorch)** | **79.1 ms** | **12.6 FPS** | **1.0x** |
+| PreGest (ONNX FP32) | 638.9 ms | 1.6 FPS | 0.12x (8x slower) |
+| C3D Baseline | ~300 ms | ~3.3 FPS | 0.26x (3.8x slower) |
+| SlowFast Baseline | ~210 ms | ~4.8 FPS | 0.38x (2.7x slower) |
+| TimeSformer | ~400 ms | ~2.5 FPS | 0.20x (5.1x slower) |
+
+**Our Design Philosophy**: PreGest achieves **79ms latency**—within the 100ms threshold—by decoupling spatial and temporal processing. We use efficient 2D CNNs for spatial extraction and lightweight transformers for temporal reasoning, delivering **2.7x speedup over SlowFast** and **3.8x over C3D**.
 
 ### Key Files Generated
 
@@ -342,15 +425,11 @@ The code uses `pathlib.Path` for all file operations and has been tested on:
 1. **CUDA out of memory**:
    - Reduce batch size: `python main.py train --batch-size 16`
 
-2. **Dataset download fails**:
-   - Download manually from https://20bn.com/datasets/jester
-   - Place videos in `data/jester_raw/` organized by gesture class
-
-3. **MediaPipe installation issues**:
+2. **MediaPipe installation issues**:
    - Ensure compatible OpenCV version
    - Check Python version compatibility
 
-4. **Import errors**:
+3. **Import errors**:
    - Activate virtual environment: `source venv/bin/activate`
    - Install dependencies: `pip install -r requirements.txt`
 
@@ -408,7 +487,6 @@ Contributions are welcome! Please:
 
 ## Acknowledgments
 
-- 20BN-Jester dataset creators
 - PyTorch team for the excellent deep learning framework
 - OpenMMLab team for advanced pose estimation and computer vision tools
 - Hugging Face for Transformer inspiration
