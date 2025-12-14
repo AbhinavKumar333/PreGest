@@ -20,26 +20,31 @@ from src.quest3_preprocessor import extract_frames, generate_hand_mask
 
 def load_model():
     """Load the trained gesture recognition model."""
-    # Use the exact config that was used during training
+    # Use the exact config that was used during PHASE 2 training
+    # These values were inferred from the checkpoint tensor shapes:
+    # - fusion.rgb_proj.weight: [320, 512] -> fusion_dim=320
+    # - input_proj.weight: [288, 320] -> hidden_dim=288
+    # - transformer.layers.0.linear1.weight: [576, 288] -> feedforward_dim=576
+    # - pos_encoder.pe: [1, 30, 288] -> max_seq_len=30
     model = create_model(
         num_classes=MODEL_CONFIG['num_classes'],
         backbone=MODEL_CONFIG['backbone'],
         rgb_pretrained=MODEL_CONFIG['rgb_pretrained'],
         mask_pretrained=MODEL_CONFIG['mask_pretrained'],
-        fusion_dim=MODEL_CONFIG['fusion_dim'],
-        hidden_dim=MODEL_CONFIG['hidden_dim'],
+        fusion_dim=320,        # Matches checkpoint
+        hidden_dim=288,        # Matches checkpoint
         num_heads=MODEL_CONFIG['num_heads'],
         num_layers=MODEL_CONFIG['num_layers'],
-        feedforward_dim=MODEL_CONFIG['feedforward_dim'],
+        feedforward_dim=576,   # Matches checkpoint
         dropout=MODEL_CONFIG['dropout'],
-        max_seq_len=60  # Override: checkpoint was trained with 60 frames
+        max_seq_len=30         # Matches checkpoint
     )
     
     # Try to load the best model
     model_path = BEST_MODEL_PATH
     if not model_path.exists():
         # Fallback to phase2 model
-        model_path = Path("results_new/phase3_optimization/quest3_model_fp32.onnx")
+        model_path = Path("results/quest3_phase2_best.pth")
     
     if model_path.exists():
         checkpoint = torch.load(model_path, map_location=DEVICE, weights_only=False)
@@ -57,8 +62,8 @@ def load_model():
 
 
 
-# Use 60 frames to match the trained model
-MODEL_SEQ_LENGTH = 60
+# Use 30 frames to match the trained model checkpoint
+MODEL_SEQ_LENGTH = 30
 
 def preprocess_video(video_path: str) -> torch.Tensor:
     """Preprocess a video file into model input tensors."""

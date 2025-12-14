@@ -56,7 +56,7 @@ data/jester_processed/
 data/quest3_raw/
 data/quest3_preprocessed/
 models/
-*.pth
+# *.pth
 *.onnx
 *.h5
 *.pkl
@@ -113,4 +113,4 @@ sysinfo.txt
 *.unitypackage
 
 data/
-results*/
+# results*/
